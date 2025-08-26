@@ -93,3 +93,24 @@ export async function addVehicleEntry(entry: z.infer<typeof vehicleSchema>): Pro
         return { success: false, error: "Failed to save entry to the database." };
     }
 }
+
+const packageSchema = z.object({
+    recipient: z.string(),
+    courier: z.string(),
+    trackingNumber: z.string().optional(),
+    packagePhoto: z.string().optional(),
+});
+
+export async function addPackageEntry(entry: z.infer<typeof packageSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "packages"), {
+            ...entry,
+            receivedAt: serverTimestamp(),
+            status: 'received',
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        return { success: false, error: "Failed to save entry to the database." };
+    }
+}

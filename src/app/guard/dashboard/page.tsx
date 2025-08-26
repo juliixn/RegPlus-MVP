@@ -6,6 +6,7 @@ import GuardDashboard from "@/components/guard/GuardDashboard";
 import VehicleRegistrationForm from "@/components/guard/VehicleRegistrationForm";
 import PedestrianRegistrationForm from "@/components/guard/PedestrianRegistrationForm";
 import LogbookForm from "@/components/guard/LogbookForm";
+import PackageRegistrationForm from "@/components/guard/PackageRegistrationForm";
 import ProofOfLifeAlert from "@/components/guard/ProofOfLifeAlert";
 
 import {
@@ -62,11 +63,11 @@ export default function GuardPage() {
       </Dialog>
       
       <Dialog open={activeDialog === 'package'} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px] max-h-screen overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Package Management</DialogTitle>
           </DialogHeader>
-          <p className="py-4 text-center text-muted-foreground">Package management functionality coming soon.</p>
+          <PackageRegistrationForm onClose={closeDialog} />
         </DialogContent>
       </Dialog>
 
