@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -41,6 +42,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Firebase is not properly configured. Please check your environment variables.",
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -100,6 +109,14 @@ export default function LoginPage() {
   };
 
   const handleDemoLogin = async (email: string) => {
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Firebase is not properly configured. Please check your environment variables.",
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, 'password');
@@ -117,6 +134,14 @@ export default function LoginPage() {
   
   const onPasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Firebase is not properly configured. Please check your environment variables.",
+      });
+      return;
+    }
     setIsResetting(true);
     const result = await handlePasswordReset(resetEmail);
     if (result.success) {
