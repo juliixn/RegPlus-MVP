@@ -76,6 +76,14 @@ export default function LoginPage() {
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Firebase is not properly configured. Please check your environment variables.",
+      });
+      return;
+    }
     const validation = signupSchema.safeParse({ name: signupName, email: signupEmail, password: signupPassword });
     if (!validation.success) {
       toast({
@@ -284,3 +292,5 @@ export default function LoginPage() {
     </main>
   )
 }
+
+    
