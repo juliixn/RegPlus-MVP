@@ -135,6 +135,24 @@ export async function addResident(entry: z.infer<typeof residentSchema>): Promis
     }
 }
 
+const guardSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+});
+
+export async function addGuard(entry: z.infer<typeof guardSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "guards"), {
+            ...entry,
+            createdAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        return { success: false, error: "Failed to save guard to the database." };
+    }
+}
+
 
 // Functions to fetch history
 async function getCollectionData(collectionName: string, orderByField: string = 'timestamp') {
@@ -177,4 +195,8 @@ export async function getPackageEntries() {
 
 export async function getResidents() {
     return getCollectionData("residents", "createdAt");
+}
+
+export async function getGuards() {
+    return getCollectionData("guards", "createdAt");
 }

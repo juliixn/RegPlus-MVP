@@ -47,7 +47,7 @@ export default function AdminLayout({
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                              <SidebarMenuItem>
-                                <SidebarMenuButton href="#" tooltip="Manage Guards">
+                                <SidebarMenuButton href="/admin/guards" isActive={pathname.includes('/guards')} tooltip="Manage Guards">
                                     <ShieldCheck />
                                     <span>Guards</span>
                                 </SidebarMenuButton>
