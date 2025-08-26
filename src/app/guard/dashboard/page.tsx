@@ -8,6 +8,7 @@ import PedestrianRegistrationForm from "@/components/guard/PedestrianRegistratio
 import LogbookForm from "@/components/guard/LogbookForm";
 import PackageRegistrationForm from "@/components/guard/PackageRegistrationForm";
 import ProofOfLifeAlert from "@/components/guard/ProofOfLifeAlert";
+import HistoryLog from "@/components/guard/HistoryLog";
 
 import {
   Dialog,
@@ -68,6 +69,15 @@ export default function GuardPage() {
             <DialogTitle>Package Management</DialogTitle>
           </DialogHeader>
           <PackageRegistrationForm onClose={closeDialog} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeDialog === 'history'} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
+        <DialogContent className="sm:max-w-[800px] max-h-screen overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Activity History</DialogTitle>
+          </DialogHeader>
+          <HistoryLog />
         </DialogContent>
       </Dialog>
 

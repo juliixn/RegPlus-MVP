@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Car, Footprints, Package, BookText, ShieldAlert, LogOut } from "lucide-react";
+import { Car, Footprints, Package, BookText, ShieldAlert, LogOut, History } from "lucide-react";
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
@@ -63,7 +63,7 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
         </div>
       </header>
       <main className="flex-1 p-4 md:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {actions.map((action) => (
             <Button
               key={action.name}
@@ -78,20 +78,35 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
             </Button>
           ))}
         </div>
-
-        <Card className="mt-6">
-            <CardContent className="p-4">
-                <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-                    <div className="text-center md:text-left">
-                        <h3 className="font-semibold">Night Shift Alert</h3>
-                        <p className="text-sm text-muted-foreground">Click to manually trigger a 'Proof of Life' alert for testing.</p>
+        
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Card>
+                <CardContent className="p-4">
+                    <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+                        <div className="text-center md:text-left">
+                            <h3 className="font-semibold">Activity History</h3>
+                            <p className="text-sm text-muted-foreground">Review recent vehicle, pedestrian, and logbook entries.</p>
+                        </div>
+                        <Button onClick={() => onOpenDialog('history')} className="w-full sm:w-auto">
+                            <History className="mr-2 h-4 w-4" /> View History
+                        </Button>
                     </div>
-                    <Button onClick={() => onOpenDialog('proofOfLife')} variant="destructive" className="w-full sm:w-auto">
-                        <ShieldAlert className="mr-2 h-4 w-4" /> Trigger Alert
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardContent className="p-4">
+                    <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+                        <div className="text-center md:text-left">
+                            <h3 className="font-semibold">Night Shift Alert</h3>
+                            <p className="text-sm text-muted-foreground">Click to manually trigger a 'Proof of Life' alert.</p>
+                        </div>
+                        <Button onClick={() => onOpenDialog('proofOfLife')} variant="destructive" className="w-full sm:w-auto">
+                            <ShieldAlert className="mr-2 h-4 w-4" /> Trigger Alert
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
       </main>
       <footer className="shrink-0 border-t bg-card p-4">
         <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-muted-foreground">

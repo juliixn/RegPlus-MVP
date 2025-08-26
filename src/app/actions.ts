@@ -5,7 +5,7 @@ import type { OCRVisitorInformationOutput } from "@/ai/flows/ocr-visitor-informa
 import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from "firebase/firestore";
 import * as z from "zod";
 
 export async function extractInfoFromId(photoDataUri: string): Promise<OCRVisitorInformationOutput | { error: string }> {
@@ -113,4 +113,39 @@ export async function addPackageEntry(entry: z.infer<typeof packageSchema>): Pro
         console.error("Error adding document: ", e);
         return { success: false, error: "Failed to save entry to the database." };
     }
+}
+
+// Functions to fetch history
+async function getCollectionData(collectionName: string) {
+    try {
+        const q = query(collection(db, collectionName), orderBy("timestamp", "desc"), limit(50));
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => {
+            const docData = doc.data();
+            return {
+                id: doc.id,
+                ...docData,
+                // Convert Firestore Timestamp to a serializable format (ISO string)
+                timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate().toLocaleString() : null,
+                receivedAt: docData.receivedAt?.toDate ? docData.receivedAt.toDate().toLocaleString() : null,
+            };
+        });
+        return { success: true, data };
+    } catch (error) {
+        console.error(`Error fetching ${collectionName}: `, error);
+        return { success: false, error: `Failed to fetch ${collectionName} data.` };
+    }
+}
+
+
+export async function getVehicleEntries() {
+    return getCollectionData("vehicle_registrations");
+}
+
+export async function getPedestrianEntries() {
+    return getCollectionData("pedestrian_registrations");
+}
+
+export async function getLogbookEntries() {
+    return getCollectionData("logbook");
 }
