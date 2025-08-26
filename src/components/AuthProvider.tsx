@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Only subscribe if auth is properly initialized
-    if (auth && auth.onAuthStateChanged) {
+    if (auth && typeof auth.onAuthStateChanged === 'function') {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return () => unsubscribe();
     } else {
         // If auth is not initialized, stop loading and treat as logged out.
+        console.warn("Firebase Auth is not initialized. User authentication will be disabled.");
         setLoading(false);
     }
   }, []);

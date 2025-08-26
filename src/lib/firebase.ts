@@ -14,22 +14,21 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
-// This check prevents errors during server-side rendering or when env vars are not loaded.
+// This check prevents Firebase from initializing with placeholder values
 if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
+    try {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        auth = getAuth(app);
+        db = getFirestore(app);
+    } catch (e) {
+        console.error("Failed to initialize Firebase", e);
+    }
 } else {
-    console.warn("Firebase config is missing or using placeholder values. Firebase services will be disabled.");
-    // Provide dummy objects to prevent app crashes when importing these services
-    app = {} as FirebaseApp;
-    auth = {} as Auth;
-    db = {} as Firestore;
+    console.warn("Firebase config is missing or invalid. Firebase services will be disabled.");
 }
-
 
 export { app, auth, db };
