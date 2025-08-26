@@ -35,7 +35,7 @@ export default function GuardPage() {
       <GuardDashboard onOpenDialog={openDialog} />
 
       <Dialog open={activeDialog === 'vehicle'} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-screen overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Vehicular Registration</DialogTitle>
           </DialogHeader>
@@ -44,7 +44,7 @@ export default function GuardPage() {
       </Dialog>
       
       <Dialog open={activeDialog === 'pedestrian'} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-screen overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Pedestrian Registration</DialogTitle>
           </DialogHeader>

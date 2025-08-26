@@ -85,7 +85,7 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
                 <div className="relative h-32 w-48 rounded-md border-2 border-dashed bg-muted">
                     {field.value && <Image src={field.value} alt="ID Photo" layout="fill" objectFit="contain" className="rounded-md" />}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                     <Button type="button" variant="outline" onClick={() => setIsCameraOpen(true)}>
                       {field.value ? "Retake Photo" : "Take Photo"}
                     </Button>
@@ -112,7 +112,7 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
             )}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="visitorType"
@@ -159,11 +159,11 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit">Register Pedestrian</Button>
+            <Button type="submit" className="w-full sm:w-auto">Register Pedestrian</Button>
           </div>
         </form>
       </Form>

@@ -29,7 +29,7 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6">
         <div className="flex items-center gap-2">
             <ShieldAlert className="h-6 w-6 text-primary" />
             <h1 className="text-lg font-semibold">Guard Dashboard</h1>
@@ -63,14 +63,14 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
                         <h3 className="font-semibold">Night Shift Alert</h3>
                         <p className="text-sm text-muted-foreground">Click to manually trigger a 'Proof of Life' alert for testing.</p>
                     </div>
-                    <Button onClick={() => onOpenDialog('proofOfLife')} variant="destructive">
+                    <Button onClick={() => onOpenDialog('proofOfLife')} variant="destructive" className="w-full sm:w-auto">
                         <ShieldAlert className="mr-2 h-4 w-4" /> Trigger Alert
                     </Button>
                 </div>
             </CardContent>
         </Card>
       </main>
-      <footer className="border-t bg-card p-4">
+      <footer className="shrink-0 border-t bg-card p-4">
         <Button variant="ghost" className="w-full justify-start text-muted-foreground">
           <LogOut className="mr-2 h-4 w-4" />
           End Shift

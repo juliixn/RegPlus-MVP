@@ -253,11 +253,11 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit">Register Vehicle</Button>
+            <Button type="submit" className="w-full sm:w-auto">Register Vehicle</Button>
           </div>
         </form>
       </Form>
