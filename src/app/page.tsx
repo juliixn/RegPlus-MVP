@@ -1,21 +1,25 @@
 "use client";
 
-import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
+import { handlePasswordReset } from "./actions";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -59,6 +63,26 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+  
+  const onPasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsResetting(true);
+    const result = await handlePasswordReset(resetEmail);
+    if (result.success) {
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Please check your inbox to reset your password.",
+      });
+      setIsResetDialogOpen(false);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error,
+      });
+    }
+    setIsResetting(false);
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -90,9 +114,35 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="#" className="text-sm font-medium text-primary hover:underline">
-                    Forgot password?
-                  </Link>
+                  <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                    <DialogTrigger asChild>
+                       <button type="button" className="text-sm font-medium text-primary hover:underline">
+                        Forgot password?
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                          Enter your email address and we will send you a link to reset your password.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={onPasswordReset} className="space-y-4">
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="m@example.com"
+                          required
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                        />
+                        <Button type="submit" className="w-full" disabled={isResetting}>
+                          {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Send Reset Link
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 <Input 
                   id="password" 

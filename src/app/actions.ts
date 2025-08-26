@@ -4,8 +4,9 @@ import { ocrVisitorInformation } from "@/ai/flows/ocr-visitor-information";
 import type { OCRVisitorInformationOutput } from "@/ai/flows/ocr-visitor-information";
 import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc, where, Timestamp,getCountFromServer } from "firebase/firestore";
+import { sendPasswordResetEmail } from "firebase/auth";
 import * as z from "zod";
 
 export async function extractInfoFromId(photoDataUri: string): Promise<OCRVisitorInformationOutput | { error: string }> {
@@ -342,5 +343,18 @@ export async function getDashboardStats() {
     } catch (error) {
         console.error("Error fetching dashboard stats: ", error);
         return { success: false, error: "Failed to fetch dashboard stats." };
+    }
+}
+
+export async function handlePasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        await sendPasswordResetEmail(auth, email);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Password reset error:", error);
+        if (error.code === 'auth/user-not-found') {
+            return { success: false, error: "No user found with this email address." };
+        }
+        return { success: false, error: "Failed to send password reset email." };
     }
 }
