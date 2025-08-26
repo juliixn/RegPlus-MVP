@@ -6,7 +6,7 @@ import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, S
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '../AuthProvider';
 import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function AdminLayout({
     children,
@@ -15,6 +15,7 @@ export default function AdminLayout({
 }) {
     const { user } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     const handleLogout = async () => {
         await auth.signOut();
@@ -34,13 +35,13 @@ export default function AdminLayout({
                     <SidebarContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton href="/admin/dashboard" isActive={true} tooltip="Dashboard">
+                                <SidebarMenuButton href="/admin/dashboard" isActive={pathname.includes('/dashboard')} tooltip="Dashboard">
                                     <LayoutDashboard />
                                     <span>Dashboard</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <SidebarMenuButton href="#" tooltip="Manage Residents">
+                                <SidebarMenuButton href="/admin/residents" isActive={pathname.includes('/residents')} tooltip="Manage Residents">
                                     <Users />
                                     <span>Residents</span>
                                 </SidebarMenuButton>

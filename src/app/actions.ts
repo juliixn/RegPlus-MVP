@@ -115,9 +115,29 @@ export async function addPackageEntry(entry: z.infer<typeof packageSchema>): Pro
     }
 }
 
+const residentSchema = z.object({
+  name: z.string(),
+  apartment: z.string(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+});
+
+export async function addResident(entry: z.infer<typeof residentSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "residents"), {
+            ...entry,
+            createdAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        return { success: false, error: "Failed to save resident to the database." };
+    }
+}
+
+
 // Functions to fetch history
-async function getCollectionData(collectionName: string) {
-    const orderByField = collectionName === 'packages' ? 'receivedAt' : 'timestamp';
+async function getCollectionData(collectionName: string, orderByField: string = 'timestamp') {
     try {
         const q = query(collection(db, collectionName), orderBy(orderByField, "desc"), limit(50));
         const querySnapshot = await getDocs(q);
@@ -126,9 +146,10 @@ async function getCollectionData(collectionName: string) {
             return {
                 id: doc.id,
                 ...docData,
-                // Convert Firestore Timestamp to a serializable format (ISO string)
+                // Convert Firestore Timestamp to a serializable format
                 timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate().toLocaleString() : null,
                 receivedAt: docData.receivedAt?.toDate ? docData.receivedAt.toDate().toLocaleString() : null,
+                createdAt: docData.createdAt?.toDate ? docData.createdAt.toDate().toLocaleString() : null,
             };
         });
         return { success: true, data };
@@ -137,7 +158,6 @@ async function getCollectionData(collectionName: string) {
         return { success: false, error: `Failed to fetch ${collectionName} data.` };
     }
 }
-
 
 export async function getVehicleEntries() {
     return getCollectionData("vehicle_registrations");
@@ -152,5 +172,9 @@ export async function getLogbookEntries() {
 }
 
 export async function getPackageEntries() {
-    return getCollectionData("packages");
+    return getCollectionData("packages", "receivedAt");
+}
+
+export async function getResidents() {
+    return getCollectionData("residents", "createdAt");
 }
