@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CameraCapture from "./CameraCapture";
 import { useToast } from "@/hooks/use-toast";
-import { extractInfoFromId } from "@/app/actions";
+import { extractInfoFromId, extractLicensePlate } from "@/app/actions";
 
 const formSchema = z.object({
   licensePlate: z.string().min(1, "License plate is required."),
@@ -36,7 +36,8 @@ interface VehicleRegistrationFormProps {
 export default function VehicleRegistrationForm({ onClose }: VehicleRegistrationFormProps) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<'id' | 'vehicle' | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingId, setIsProcessingId] = useState(false);
+  const [isProcessingPlate, setIsProcessingPlate] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -65,12 +66,12 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
     setCameraTarget(null);
   };
 
-  const handleExtract = async () => {
+  const handleExtractId = async () => {
     if (!idPhotoValue) {
       toast({ variant: "destructive", title: "No ID Photo", description: "Please capture a photo of the ID first." });
       return;
     }
-    setIsProcessing(true);
+    setIsProcessingId(true);
     const result = await extractInfoFromId(idPhotoValue);
     if ('error' in result) {
         toast({ variant: "destructive", title: "AI Extraction Failed", description: result.error });
@@ -79,8 +80,25 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
         form.setValue("documentNumber", result.visitorDocumentNumber, { shouldValidate: true });
         toast({ title: "Information Extracted", description: `Visitor details updated. Confidence: ${Math.round(result.confidence * 100)}%` });
     }
-    setIsProcessing(false);
+    setIsProcessingId(false);
   };
+
+  const handleExtractPlate = async () => {
+    if (!vehiclePhotoValue) {
+      toast({ variant: "destructive", title: "No Vehicle Photo", description: "Please capture a photo of the vehicle first." });
+      return;
+    }
+    setIsProcessingPlate(true);
+    const result = await extractLicensePlate(vehiclePhotoValue);
+    if ('error' in result) {
+        toast({ variant: "destructive", title: "AI Extraction Failed", description: result.error });
+    } else {
+        form.setValue("licensePlate", result.licensePlate, { shouldValidate: true });
+        toast({ title: "License Plate Extracted", description: `Plate updated. Confidence: ${Math.round(result.confidence * 100)}%` });
+    }
+    setIsProcessingPlate(false);
+  };
+
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log(values);
@@ -109,8 +127,8 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                       <Button type="button" size="sm" variant="outline" onClick={() => openCamera('id')}>
                         {field.value ? "Retake" : "Capture ID"}
                       </Button>
-                      <Button type="button" size="sm" onClick={handleExtract} disabled={!field.value || isProcessing}>
-                          {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Button type="button" size="sm" onClick={handleExtractId} disabled={!field.value || isProcessingId}>
+                          {isProcessingId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Extract with AI
                       </Button>
                     </div>
@@ -126,9 +144,15 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                     <div className="relative h-32 w-48 rounded-md border-2 border-dashed bg-muted">
                         {field.value && <Image src={field.value} alt="Vehicle Photo" layout="fill" objectFit="contain" className="rounded-md" />}
                     </div>
-                    <Button type="button" size="sm" variant="outline" onClick={() => openCamera('vehicle')}>
-                        {field.value ? "Retake Vehicle Photo" : "Capture Vehicle Photo"}
-                    </Button>
+                     <div className="flex flex-wrap justify-center gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => openCamera('vehicle')}>
+                            {field.value ? "Retake" : "Capture Vehicle"}
+                        </Button>
+                         <Button type="button" size="sm" onClick={handleExtractPlate} disabled={!field.value || isProcessingPlate}>
+                            {isProcessingPlate && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Extract Plate
+                        </Button>
+                    </div>
                 </FormItem>
                 )}
             />
