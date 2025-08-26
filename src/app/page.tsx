@@ -1,11 +1,66 @@
+"use client";
+
 import Link from "next/link"
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ShieldCheck } from "lucide-react"
+import { ShieldCheck, Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/guard/dashboard');
+    } catch (error: any) {
+      console.error("Authentication error:", error);
+      let errorMessage = "An unexpected error occurred.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Use a demo account you've created in Firebase Auth
+      await signInWithEmailAndPassword(auth, 'guard@regplus.com', 'password');
+      router.push('/guard/dashboard');
+    } catch (error) {
+      console.error("Demo login failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Demo Login Failed",
+        description: "Could not log in with the demo account. Please create a 'guard@regplus.com' user in your Firebase project.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
@@ -20,10 +75,18 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="m@example.com" required />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="m@example.com" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -32,18 +95,24 @@ export default function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <Input id="password" type="password" required />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Login
               </Button>
             </form>
             <div className="mt-4 text-center text-sm">
               <p className="text-muted-foreground">Or continue as a guard for demo:</p>
-               <Button asChild variant="outline" className="mt-2 w-full">
-                <Link href="/guard/dashboard">
-                  Enter Guard Dashboard
-                </Link>
+               <Button onClick={handleDemoLogin} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+                Enter Guard Dashboard
               </Button>
             </div>
           </CardContent>

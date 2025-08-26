@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Car, Footprints, Package, BookText, ShieldAlert, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 interface GuardDashboardProps {
   onOpenDialog: (dialog: string) => void;
@@ -11,11 +14,31 @@ interface GuardDashboardProps {
 
 export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
   const [time, setTime] = useState(new Date());
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      router.push('/');
+      toast({
+        title: "Logged Out",
+        description: "You have successfully logged out.",
+      });
+    } catch (error) {
+      console.error("Logout error", error);
+      toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+      });
+    }
+  };
 
   const formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const formattedDate = time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -71,7 +94,7 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
         </Card>
       </main>
       <footer className="shrink-0 border-t bg-card p-4">
-        <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-muted-foreground">
           <LogOut className="mr-2 h-4 w-4" />
           End Shift
         </Button>
