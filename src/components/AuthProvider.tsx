@@ -26,6 +26,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Only subscribe if auth is properly initialized
+    if (!auth?.onAuthStateChanged) {
+        setLoading(false);
+        return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const tokenResult = await user.getIdTokenResult();
