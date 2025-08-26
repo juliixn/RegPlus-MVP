@@ -5,7 +5,7 @@ import type { OCRVisitorInformationOutput } from "@/ai/flows/ocr-visitor-informa
 import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc, where, Timestamp,getCountFromServer } from "firebase/firestore";
 import * as z from "zod";
 
 export async function extractInfoFromId(photoDataUri: string): Promise<OCRVisitorInformationOutput | { error: string }> {
@@ -280,4 +280,40 @@ export async function getGuards() {
 
 export async function getCommunications() {
     return getCollectionData("communications", "sentAt");
+}
+
+export async function getDashboardStats() {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const todayTimestamp = Timestamp.fromDate(today);
+        const tomorrowTimestamp = Timestamp.fromDate(tomorrow);
+
+        const residentsSnap = await getCountFromServer(collection(db, "residents"));
+        
+        const vehicleQuery = query(collection(db, "vehicle_registrations"), where("timestamp", ">=", todayTimestamp), where("timestamp", "<", tomorrowTimestamp));
+        const vehicleSnap = await getCountFromServer(vehicleQuery);
+
+        const pedestrianQuery = query(collection(db, "pedestrian_registrations"), where("timestamp", ">=", todayTimestamp), where("timestamp", "<", tomorrowTimestamp));
+        const pedestrianSnap = await getCountFromServer(pedestrianQuery);
+
+        const packagesQuery = query(collection(db, "packages"), where("status", "==", "received"));
+        const packagesSnap = await getCountFromServer(packagesQuery);
+
+        return {
+            success: true,
+            data: {
+                totalResidents: residentsSnap.data().count,
+                vehicleEntriesToday: vehicleSnap.data().count,
+                pedestrianEntriesToday: pedestrianSnap.data().count,
+                pendingPackages: packagesSnap.data().count,
+            }
+        };
+    } catch (error) {
+        console.error("Error fetching dashboard stats: ", error);
+        return { success: false, error: "Failed to fetch dashboard stats." };
+    }
 }
