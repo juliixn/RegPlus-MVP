@@ -4,9 +4,10 @@ import { ocrVisitorInformation } from "@/ai/flows/ocr-visitor-information";
 import type { OCRVisitorInformationOutput } from "@/ai/flows/ocr-visitor-information";
 import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { adminAuth, adminDb, admin } from "@/lib/firebase-admin";
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc, where, Timestamp, getCountFromServer, deleteDoc } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { sendPasswordResetEmail } from "firebase/auth";
 import * as z from "zod";
 
@@ -158,6 +159,9 @@ export async function extractLicensePlate(photoDataUri: string): Promise<OCRLice
 }
 
 export async function addLogbookEntry(entry: string): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     if (!entry.trim()) {
         return { success: false, error: "Logbook entry cannot be empty." };
     }
@@ -181,6 +185,9 @@ const pedestrianSchema = z.object({
 });
 
 export async function addPedestrianEntry(entry: z.infer<typeof pedestrianSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "pedestrian_registrations"), {
             ...entry,
@@ -205,6 +212,9 @@ const vehicleSchema = z.object({
 });
 
 export async function addVehicleEntry(entry: z.infer<typeof vehicleSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "vehicle_registrations"), {
             ...entry,
@@ -221,10 +231,13 @@ const packageSchema = z.object({
     recipient: z.string(),
     courier: z.string(),
     trackingNumber: z.string().optional(),
-    packagePhoto: z.string().optional(),
+    packagePhotoUrl: z.string().optional(),
 });
 
 export async function addPackageEntry(entry: z.infer<typeof packageSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "packages"), {
             ...entry,
@@ -238,6 +251,21 @@ export async function addPackageEntry(entry: z.infer<typeof packageSchema>): Pro
     }
 }
 
+export async function addFileAndGetURL(fileDataUrl: string, path: string): Promise<{ success: boolean; url?: string; error?: string }> {
+    if (!storage) {
+        return { success: false, error: "Firebase Storage is not configured." };
+    }
+    try {
+        const storageRef = ref(storage, path);
+        const snapshot = await uploadString(storageRef, fileDataUrl, 'data_url');
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return { success: true, url: downloadURL };
+    } catch (error) {
+        console.error("Error uploading file:", error);
+        return { success: false, error: "Failed to upload file." };
+    }
+}
+
 const residentSchema = z.object({
   name: z.string(),
   apartment: z.string(),
@@ -246,6 +274,9 @@ const residentSchema = z.object({
 });
 
 export async function addResident(entry: z.infer<typeof residentSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "residents"), {
             ...entry,
@@ -264,6 +295,9 @@ const guardSchema = z.object({
 });
 
 export async function addGuard(entry: z.infer<typeof guardSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "guards"), {
             ...entry,
@@ -283,6 +317,9 @@ const communicationSchema = z.object({
 });
 
 export async function addCommunication(entry: z.infer<typeof communicationSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "communications"), {
             ...entry,
@@ -304,6 +341,9 @@ const shiftSchema = z.object({
 });
 
 export async function startShift(data: z.infer<typeof shiftSchema>): Promise<{ success: boolean; shiftId?: string; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         const docRef = await addDoc(collection(db, "shifts"), {
             ...data,
@@ -319,6 +359,9 @@ export async function startShift(data: z.infer<typeof shiftSchema>): Promise<{ s
 }
 
 export async function endShift(shiftId: string): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         const shiftDocRef = doc(db, "shifts", shiftId);
         await updateDoc(shiftDocRef, {
@@ -340,6 +383,9 @@ const proofOfLifeSchema = z.object({
 });
 
 export async function submitProofOfLife(data: z.infer<typeof proofOfLifeSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         await addDoc(collection(db, "proof_of_life"), {
             ...data,
@@ -359,6 +405,9 @@ const visitorPassSchema = z.object({
 });
 
 export async function generateVisitorPass(data: z.infer<typeof visitorPassSchema>): Promise<{ success: boolean; passData?: any; error?: string }> {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         const docRef = await addDoc(collection(db, "visitor_passes"), {
             ...data,
@@ -382,6 +431,9 @@ export async function generateVisitorPass(data: z.infer<typeof visitorPassSchema
 
 // Functions to fetch history
 async function getCollectionData(collectionName: string, orderByField: string = 'timestamp') {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         const q = query(collection(db, collectionName), orderBy(orderByField, "desc"), limit(50));
         const querySnapshot = await getDocs(q);
@@ -433,6 +485,9 @@ export async function getCommunications() {
 }
 
 export async function getDashboardStats() {
+    if (!db) {
+        return { success: false, error: "Firebase is not configured." };
+    }
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -469,6 +524,9 @@ export async function getDashboardStats() {
 }
 
 export async function handlePasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+    if (!auth) {
+      return { success: false, error: "Firebase is not configured. Please check your environment variables." };
+    }
     try {
         await sendPasswordResetEmail(auth, email);
         return { success: true };

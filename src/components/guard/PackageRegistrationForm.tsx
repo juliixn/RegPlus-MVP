@@ -14,13 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import CameraCapture from "./CameraCapture";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { addPackageEntry } from "@/app/actions";
+import { addPackageEntry, addFileAndGetURL } from "@/app/actions";
 
 const formSchema = z.object({
   recipient: z.string({ required_error: "Please select the recipient." }),
   courier: z.string({ required_error: "Please select the courier." }),
   trackingNumber: z.string().optional(),
-  packagePhoto: z.string().optional(),
+  packagePhotoUrl: z.string().optional(),
+  packagePhotoData: z.string().optional(),
 });
 
 interface PackageRegistrationFormProps {
@@ -39,16 +40,41 @@ export default function PackageRegistrationForm({ onClose }: PackageRegistration
     },
   });
 
-  const packagePhotoValue = form.watch('packagePhoto');
+  const packagePhotoData = form.watch('packagePhotoData');
 
   const handleCapture = (imageDataUri: string) => {
-    form.setValue("packagePhoto", imageDataUri);
+    form.setValue("packagePhotoData", imageDataUri);
     setIsCameraOpen(false);
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
-    const result = await addPackageEntry(values);
+    let photoUrl = '';
+
+    // Step 1: Upload photo to Firebase Storage if it exists
+    if (values.packagePhotoData) {
+        const filePath = `package_photos/${Date.now()}.jpg`;
+        const uploadResult = await addFileAndGetURL(values.packagePhotoData, filePath);
+        if (uploadResult.success && uploadResult.url) {
+            photoUrl = uploadResult.url;
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Photo Upload Failed",
+                description: uploadResult.error || "Could not upload the package photo.",
+            });
+            setIsSubmitting(false);
+            return;
+        }
+    }
+
+    // Step 2: Save package data to Firestore with the photo URL
+    const result = await addPackageEntry({
+        recipient: values.recipient,
+        courier: values.courier,
+        trackingNumber: values.trackingNumber,
+        packagePhotoUrl: photoUrl,
+    });
 
     if (result.success) {
         toast({
@@ -72,7 +98,7 @@ export default function PackageRegistrationForm({ onClose }: PackageRegistration
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <FormField
             control={form.control}
-            name="packagePhoto"
+            name="packagePhotoData"
             render={({ field }) => (
               <FormItem className="flex flex-col items-center gap-2">
                 <FormLabel>Package Photo (Optional)</FormLabel>
