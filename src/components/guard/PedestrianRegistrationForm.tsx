@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import CameraCapture from "./CameraCapture";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { extractInfoFromId } from "@/app/actions";
+import { extractInfoFromId, addPedestrianEntry } from "@/app/actions";
 
 const formSchema = z.object({
   visitorName: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -31,6 +31,7 @@ interface PedestrianRegistrationFormProps {
 export default function PedestrianRegistrationForm({ onClose }: PedestrianRegistrationFormProps) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -63,13 +64,28 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
     setIsProcessing(false);
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-    toast({
-      title: "Pedestrian Registered",
-      description: `Visitor ${values.visitorName} has been checked in.`,
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
+    const result = await addPedestrianEntry({
+        visitorName: values.visitorName,
+        visitorType: values.visitorType,
+        destination: values.destination,
     });
-    onClose();
+
+    if (result.success) {
+        toast({
+            title: "Pedestrian Registered",
+            description: `Visitor ${values.visitorName} has been checked in.`,
+        });
+        onClose();
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: result.error || "Could not save the registration.",
+        });
+    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -86,10 +102,10 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
                     {field.value && <Image src={field.value} alt="ID Photo" layout="fill" objectFit="contain" className="rounded-md" />}
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCameraOpen(true)}>
+                    <Button type="button" variant="outline" onClick={() => setIsCameraOpen(true)} disabled={isSubmitting}>
                       {field.value ? "Retake Photo" : "Take Photo"}
                     </Button>
-                    <Button type="button" onClick={handleExtract} disabled={!field.value || isProcessing}>
+                    <Button type="button" onClick={handleExtract} disabled={!field.value || isProcessing || isSubmitting}>
                         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Extract with AI
                     </Button>
@@ -105,7 +121,7 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
               <FormItem>
                 <FormLabel>Full Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} />
+                  <Input placeholder="John Doe" {...field} disabled={isSubmitting}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -119,7 +135,7 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Visitor Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -141,7 +157,7 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Destination</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select address" />
@@ -160,10 +176,13 @@ export default function PedestrianRegistrationForm({ onClose }: PedestrianRegist
           </div>
 
           <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto" disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" className="w-full sm:w-auto">Register Pedestrian</Button>
+            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Register Pedestrian
+            </Button>
           </div>
         </form>
       </Form>

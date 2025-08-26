@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CameraCapture from "./CameraCapture";
 import { useToast } from "@/hooks/use-toast";
-import { extractInfoFromId, extractLicensePlate } from "@/app/actions";
+import { extractInfoFromId, extractLicensePlate, addVehicleEntry } from "@/app/actions";
 
 const formSchema = z.object({
   licensePlate: z.string().min(1, "License plate is required."),
@@ -38,6 +38,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
   const [cameraTarget, setCameraTarget] = useState<'id' | 'vehicle' | null>(null);
   const [isProcessingId, setIsProcessingId] = useState(false);
   const [isProcessingPlate, setIsProcessingPlate] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -100,13 +101,33 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
   };
 
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-    toast({
-      title: "Vehicle Registered",
-      description: `Vehicle with plate ${values.licensePlate} has been checked in.`,
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
+    const result = await addVehicleEntry({
+        licensePlate: values.licensePlate,
+        driverName: values.driverName,
+        visitorType: values.visitorType,
+        destination: values.destination,
+        vehicleType: values.vehicleType,
+        vehicleBrand: values.vehicleBrand,
+        vehicleColor: values.vehicleColor,
+        documentNumber: values.documentNumber,
     });
-    onClose();
+
+    if (result.success) {
+        toast({
+            title: "Vehicle Registered",
+            description: `Vehicle with plate ${values.licensePlate} has been checked in.`,
+        });
+        onClose();
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: result.error || "Could not save the registration.",
+        });
+    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -124,10 +145,10 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                         {field.value && <Image src={field.value} alt="ID Photo" layout="fill" objectFit="contain" className="rounded-md" />}
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => openCamera('id')}>
+                      <Button type="button" size="sm" variant="outline" onClick={() => openCamera('id')} disabled={isSubmitting}>
                         {field.value ? "Retake" : "Capture ID"}
                       </Button>
-                      <Button type="button" size="sm" onClick={handleExtractId} disabled={!field.value || isProcessingId}>
+                      <Button type="button" size="sm" onClick={handleExtractId} disabled={!field.value || isProcessingId || isSubmitting}>
                           {isProcessingId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Extract with AI
                       </Button>
@@ -145,10 +166,10 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                         {field.value && <Image src={field.value} alt="Vehicle Photo" layout="fill" objectFit="contain" className="rounded-md" />}
                     </div>
                      <div className="flex flex-wrap justify-center gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={() => openCamera('vehicle')}>
+                        <Button type="button" size="sm" variant="outline" onClick={() => openCamera('vehicle')} disabled={isSubmitting}>
                             {field.value ? "Retake" : "Capture Vehicle"}
                         </Button>
-                         <Button type="button" size="sm" onClick={handleExtractPlate} disabled={!field.value || isProcessingPlate}>
+                         <Button type="button" size="sm" onClick={handleExtractPlate} disabled={!field.value || isProcessingPlate || isSubmitting}>
                             {isProcessingPlate && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Extract Plate
                         </Button>
@@ -164,7 +185,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Driver's Full Name</FormLabel>
-                <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                <FormControl><Input placeholder="John Doe" {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -177,7 +198,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>License Plate</FormLabel>
-                    <FormControl><Input placeholder="ABC-123" {...field} /></FormControl>
+                    <FormControl><Input placeholder="ABC-123" {...field} disabled={isSubmitting} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -188,7 +209,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Visitor Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
                         <SelectContent>
                             <SelectItem value="visit">Visit</SelectItem>
@@ -206,7 +227,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select address" /></SelectTrigger></FormControl>
                         <SelectContent>
                             <SelectItem value="a101">A-101</SelectItem>
@@ -227,7 +248,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
                         <SelectContent>
                             <SelectItem value="sedan">Sedan</SelectItem>
@@ -245,7 +266,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Brand</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger></FormControl>
                         <SelectContent>
                             <SelectItem value="nissan">Nissan</SelectItem>
@@ -263,7 +284,7 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Color</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select color" /></SelectTrigger></FormControl>
                         <SelectContent>
                             <SelectItem value="red">Red</SelectItem>
@@ -278,10 +299,13 @@ export default function VehicleRegistrationForm({ onClose }: VehicleRegistration
           </div>
 
           <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto" disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" className="w-full sm:w-auto">Register Vehicle</Button>
+            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Register Vehicle
+            </Button>
           </div>
         </form>
       </Form>

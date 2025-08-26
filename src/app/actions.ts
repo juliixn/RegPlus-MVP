@@ -6,6 +6,7 @@ import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import * as z from "zod";
 
 export async function extractInfoFromId(photoDataUri: string): Promise<OCRVisitorInformationOutput | { error: string }> {
   try {
@@ -41,6 +42,49 @@ export async function addLogbookEntry(entry: string): Promise<{ success: boolean
     try {
         await addDoc(collection(db, "logbook"), {
             entry: entry,
+            timestamp: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        return { success: false, error: "Failed to save entry to the database." };
+    }
+}
+
+const pedestrianSchema = z.object({
+  visitorName: z.string(),
+  visitorType: z.string(),
+  destination: z.string(),
+});
+
+export async function addPedestrianEntry(entry: z.infer<typeof pedestrianSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "pedestrian_registrations"), {
+            ...entry,
+            timestamp: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        return { success: false, error: "Failed to save entry to the database." };
+    }
+}
+
+const vehicleSchema = z.object({
+  licensePlate: z.string(),
+  driverName: z.string(),
+  visitorType: z.string(),
+  destination: z.string(),
+  vehicleType: z.string(),
+  vehicleBrand: z.string(),
+  vehicleColor: z.string(),
+  documentNumber: z.string().optional(),
+});
+
+export async function addVehicleEntry(entry: z.infer<typeof vehicleSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "vehicle_registrations"), {
+            ...entry,
             timestamp: serverTimestamp(),
         });
         return { success: true };
