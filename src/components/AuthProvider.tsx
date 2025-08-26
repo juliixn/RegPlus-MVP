@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 // Augment the User type to include our custom role claim
 interface UserWithRole extends User {
-  role?: 'admin' | 'guard' | 'resident';
+  role?: 'admin' | 'guard' | 'resident' | 'titular_condo';
 }
 
 interface AuthContextType {
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         const tokenResult = await user.getIdTokenResult();
         const userRole = (tokenResult.claims.roles as string[])?.[0] || null;
-        setUser({ ...user, role: userRole as 'admin' | 'guard' | 'resident' });
+        setUser({ ...user, role: userRole as 'admin' | 'guard' | 'resident' | 'titular_condo' });
         setRole(userRole);
       } else {
         setUser(null);
@@ -49,10 +49,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const isGuardPage = pathname.startsWith('/guard');
     const isAdminPage = pathname.startsWith('/admin');
     const isResidentPage = pathname.startsWith('/resident');
+    const isTitularPage = pathname.startsWith('/titular');
 
     if (!user) {
       // If not logged in and trying to access a protected page, redirect to login
-      if (isGuardPage || isAdminPage || isResidentPage) {
+      if (isGuardPage || isAdminPage || isResidentPage || isTitularPage) {
         router.push('/');
       }
       return;
@@ -66,13 +67,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         router.push('/guard/dashboard');
       } else if (role === 'resident') {
         router.push('/resident/dashboard');
+      } else if (role === 'titular_condo') {
+        router.push('/titular/dashboard');
       }
     } else if (isAdminPage && role !== 'admin') {
-      router.push(role === 'guard' ? '/guard/dashboard' : role === 'resident' ? '/resident/dashboard' : '/');
+      router.push(role === 'guard' ? '/guard/dashboard' : role === 'resident' ? '/resident/dashboard' : role === 'titular_condo' ? '/titular/dashboard' : '/');
     } else if (isGuardPage && role !== 'guard') {
-      router.push(role === 'admin' ? '/admin/dashboard' : role === 'resident' ? '/resident/dashboard' : '/');
+      router.push(role === 'admin' ? '/admin/dashboard' : role === 'resident' ? '/resident/dashboard' : role === 'titular_condo' ? '/titular/dashboard' : '/');
     } else if (isResidentPage && role !== 'resident') {
-        router.push(role === 'admin' ? '/admin/dashboard' : role === 'guard' ? '/guard/dashboard' : '/');
+        router.push(role === 'admin' ? '/admin/dashboard' : role === 'guard' ? '/guard/dashboard' : role === 'titular_condo' ? '/titular/dashboard' : '/');
+    } else if (isTitularPage && role !== 'titular_condo') {
+        router.push(role === 'admin' ? '/admin/dashboard' : role === 'guard' ? '/guard/dashboard' : role === 'resident' ? '/resident/dashboard' : '/');
     }
   }, [user, role, loading, pathname, router]);
 
@@ -86,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
   
   // These checks prevent rendering the wrong layout during a redirect
-  if ((pathname.startsWith('/guard') || pathname.startsWith('/admin') || pathname.startsWith('/resident')) && !user) {
+  if ((pathname.startsWith('/guard') || pathname.startsWith('/admin') || pathname.startsWith('/resident') || pathname.startsWith('/titular')) && !user) {
     return null;
   }
   if (pathname === '/' && user) {
