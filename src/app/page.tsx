@@ -24,9 +24,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // For now, we forward all logins to the guard dashboard.
-      // We will implement role-based routing later.
-      router.push('/guard/dashboard');
+      // AuthProvider will handle redirection based on role.
     } catch (error: any) {
       console.error("Authentication error:", error);
       let errorMessage = "An unexpected error occurred.";
@@ -45,17 +43,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = async (email: string, path: string) => {
+  const handleDemoLogin = async (email: string) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, 'password');
-      router.push(path);
+      // AuthProvider will handle redirection.
     } catch (error) {
       console.error("Demo login failed:", error);
       toast({
         variant: "destructive",
         title: "Demo Login Failed",
-        description: `Could not log in. Please create a user for '${email}' in your Firebase project with the password 'password'.`,
+        description: `Could not log in. Please create a user for '${email}' in your Firebase project with the password 'password' and assign them a role.`,
       });
     } finally {
       setIsLoading(false);
@@ -112,11 +110,11 @@ export default function LoginPage() {
             </form>
             <div className="mt-4 text-center text-sm">
               <p className="text-muted-foreground">Or continue for demo:</p>
-               <Button onClick={() => handleDemoLogin('guard@regplus.com', '/guard/dashboard')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
-                Enter Guard Dashboard
+               <Button onClick={() => handleDemoLogin('guard@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+                Login as Guard
               </Button>
-               <Button onClick={() => handleDemoLogin('admin@regplus.com', '/admin/dashboard')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
-                Enter Admin Dashboard
+               <Button onClick={() => handleDemoLogin('admin@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+                Login as Admin
               </Button>
             </div>
           </CardContent>

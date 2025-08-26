@@ -5,22 +5,37 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
+// Augment the User type to include our custom role claim
+interface UserWithRole extends User {
+  role?: 'admin' | 'guard';
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+interface AuthContextType {
+  user: UserWithRole | null;
+  loading: boolean;
+  role: string | null;
+}
+
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true, role: null });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserWithRole | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const tokenResult = await user.getIdTokenResult();
+        const userRole = (tokenResult.claims.roles as string[])?.[0] || null;
+        setUser({ ...user, role: userRole as 'admin' | 'guard' });
+        setRole(userRole);
+      } else {
+        setUser(null);
+        setRole(null);
+      }
       setLoading(false);
     });
 
@@ -31,17 +46,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (loading) return;
 
     const isAuthPage = pathname === '/';
-    const isProtectedPage = pathname.startsWith('/guard') || pathname.startsWith('/admin');
+    const isGuardPage = pathname.startsWith('/guard');
+    const isAdminPage = pathname.startsWith('/admin');
 
-    if (!user && isProtectedPage) {
-      router.push('/');
+    if (!user) {
+      // If not logged in and trying to access a protected page, redirect to login
+      if (isGuardPage || isAdminPage) {
+        router.push('/');
+      }
+      return;
     }
-    // Simple redirect from auth page if logged in.
-    // A more robust solution would check the user's role.
-    if (user && isAuthPage) {
+
+    // If logged in, handle redirection based on role
+    if (isAuthPage) {
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (role === 'guard') {
         router.push('/guard/dashboard');
+      }
+    } else if (isAdminPage && role !== 'admin') {
+      // If a non-admin tries to access admin pages, redirect them
+      router.push(role === 'guard' ? '/guard/dashboard' : '/');
+    } else if (isGuardPage && role !== 'guard') {
+      // If a non-guard tries to access guard pages, redirect them
+      router.push(role === 'admin' ? '/admin/dashboard' : '/');
     }
-  }, [user, loading, pathname, router]);
+  }, [user, role, loading, pathname, router]);
 
 
   if (loading) {
@@ -52,19 +82,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   }
   
-  const isAuthPage = pathname === '/';
-  const isProtectedPage = pathname.startsWith('/guard') || pathname.startsWith('/admin');
-
-  if (isAuthPage && user) {
-      return null;
+  // These checks prevent rendering the wrong layout during a redirect
+  if ((pathname.startsWith('/guard') || pathname.startsWith('/admin')) && !user) {
+    return null;
+  }
+  if (pathname === '/' && user) {
+    return null;
   }
 
-  if (isProtectedPage && !user) {
-      return null;
-  }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, role }}>
       {children}
     </AuthContext.Provider>
   );
