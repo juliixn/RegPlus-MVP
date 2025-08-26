@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { QrCode, Bell, Package, Loader2 } from "lucide-react";
-import { getCommunications } from "@/app/actions";
+import { getCommunications, getPackageEntries } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import VisitorPassDialog from "./VisitorPassDialog";
 import { useAuth } from "../AuthProvider";
@@ -18,20 +20,34 @@ interface Communication {
   sentAt: string;
 }
 
+interface Package {
+    id: string;
+    recipient: string;
+    courier: string;
+    trackingNumber?: string;
+    receivedAt: string;
+    status: string;
+}
+
 export default function ResidentDashboard() {
   const [communications, setCommunications] = useState<Communication[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPassDialogOpen, setIsPassDialogOpen] = useState(false);
+  const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchCommunications = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const result = await getCommunications();
-      if (result.success && result.data) {
-        // Filter for resident-facing communications
-        const residentComms = result.data.filter(
+      const [commsResult, packagesResult] = await Promise.all([
+        getCommunications(),
+        getPackageEntries(),
+      ]);
+
+      if (commsResult.success && commsResult.data) {
+        const residentComms = commsResult.data.filter(
           (c: any) => c.audience === 'all_residents' || c.audience === 'all'
         ) as Communication[];
         setCommunications(residentComms);
@@ -42,10 +58,23 @@ export default function ResidentDashboard() {
           description: "Could not load communications.",
         });
       }
+
+      if (packagesResult.success && packagesResult.data) {
+        // In a real app, you'd filter by residentId/apartment. For demo, we show all pending.
+        const pendingPackages = packagesResult.data.filter((p: any) => p.status === 'received') as Package[];
+        setPackages(pendingPackages);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load package information.",
+        });
+      }
+
       setLoading(false);
     };
 
-    fetchCommunications();
+    fetchData();
   }, [toast]);
 
   return (
@@ -81,7 +110,7 @@ export default function ResidentDashboard() {
                       You have {communications.length} unread messages from the administration.
                       </p>
                   )}
-                  <Button className="mt-4 w-full" variant="outline">View Messages</Button>
+                  <Button className="mt-4 w-full" variant="outline" onClick={() => document.getElementById('comms-section')?.scrollIntoView({ behavior: 'smooth' })}>View Messages</Button>
                 </CardContent>
               </Card>
               <Card>
@@ -90,15 +119,19 @@ export default function ResidentDashboard() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">You have 1 package waiting for pickup at the gate.</p>
-                  <Button className="mt-4 w-full" variant="outline">View Packages</Button>
+                  {loading ? (
+                    <Loader2 className="mt-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">You have {packages.length} package(s) waiting for pickup at the gate.</p>
+                  )}
+                  <Button className="mt-4 w-full" variant="outline" onClick={() => setIsPackageDialogOpen(true)}>View Packages</Button>
                 </CardContent>
               </Card>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card id="comms-section">
           <CardHeader>
             <CardTitle>Recent Communications</CardTitle>
           </CardHeader>
@@ -137,6 +170,43 @@ export default function ResidentDashboard() {
           residentId={user.uid}
         />
       )}
+      
+      <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pending Packages</DialogTitle>
+            <DialogDescription>
+              Here are the packages waiting for you at the security gate.
+            </DialogDescription>
+          </DialogHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Received</TableHead>
+                <TableHead>Courier</TableHead>
+                <TableHead>Tracking #</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {packages.length > 0 ? (
+                packages.map((pkg) => (
+                  <TableRow key={pkg.id}>
+                    <TableCell>{pkg.receivedAt}</TableCell>
+                    <TableCell>{pkg.courier}</TableCell>
+                    <TableCell>{pkg.trackingNumber || 'N/A'}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center">
+                    You have no pending packages.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
