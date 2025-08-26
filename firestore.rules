@@ -1,101 +1,101 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check for admin role
+    // Helper function to check for roles
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.roles.hasAny([role]);
+    }
+    
     function isAdmin() {
-      return request.auth.token.roles.hasAny(['admin']);
+      return hasRole('admin');
     }
-
-    // Helper function to check for guard role
+    
     function isGuard() {
-      return request.auth.token.roles.hasAny(['guard']);
+      return hasRole('guard');
     }
-
-    // Helper function to check for resident role
+    
     function isResident() {
-      return request.auth.token.roles.hasAny(['resident']);
+      return hasRole('resident');
     }
 
-    // Helper function to check if the user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // --- Admin-only Collections ---
-    // Residents and Guards can only be managed by administrators.
-    match /residents/{residentId} {
-      allow read, write: if isAdmin();
+    function isTitular() {
+      return hasRole('titular_condo');
     }
 
-    match /guards/{guardId} {
-      allow read, write: if isAdmin();
-    }
-    
-    // --- Communications ---
-    // Admins can manage all communications.
-    // Residents and Guards can only read relevant communications.
-    match /communications/{commId} {
-      allow write: if isAdmin();
-      allow read: if (isResident() && (resource.data.audience == 'all_residents' || resource.data.audience == 'all'))
-                  || (isGuard() && (resource.data.audience == 'all_guards' || resource.data.audience == 'all'))
-                  || isAdmin();
+    function isAnyAuthenticatedUser() {
+        return request.auth != null;
     }
 
-    // --- Guard-specific Collections ---
-    // Only authenticated guards can create entries related to security operations.
-    // Admins can read everything for auditing purposes.
-    match /logbook/{logId} {
-      allow create: if isGuard();
-      allow read: if isAdmin() || isGuard();
-    }
-
-    match /pedestrian_registrations/{regId} {
-      allow create: if isGuard();
-      allow read: if isAdmin() || isGuard();
-    }
-    
-    match /vehicle_registrations/{regId} {
-      allow create: if isGuard();
-      allow read: if isAdmin() || isGuard();
-    }
-
-    match /shifts/{shiftId} {
-      allow create, update: if isGuard() && request.auth.uid == request.resource.data.guardId;
-      allow read: if isAdmin();
-    }
-
-    match /proof_of_life/{proofId} {
-      allow create: if isGuard() && request.auth.uid == request.resource.data.guardId;
-      allow read: if isAdmin();
-    }
-
-    // --- Package Management ---
-    // Guards can create package entries.
-    // Admins and Residents can read package information.
-    // (A stricter rule would be for residents to only read their own packages)
-    match /packages/{packageId} {
-      allow create: if isGuard();
-      allow read: if isAdmin() || isResident();
-      // allow update: if isGuard(); // To mark as delivered
-    }
-    
-    // --- Visitor Passes ---
-    // Residents can create passes for themselves.
-    // Guards need to be able to read them to validate. Admins for auditing.
-    match /visitor_passes/{passId} {
-      allow create: if isResident() && request.auth.uid == request.resource.data.residentId;
-      allow read: if isAdmin() || isGuard(); 
-    }
-
-    // --- Roles Collection ---
-    // This collection should be managed server-side (e.g., via Cloud Functions or Extensions).
-    // It should be read-only from the client to prevent privilege escalation.
+    // ROLES: Only admins can manage roles
     match /roles/{userId} {
-        allow read: if isAdmin();
-        allow write: if false; // NEVER allow client-side writes to roles
+      allow read, write: if isAdmin();
+    }
+
+    // VEHICLE REGISTRATIONS: Guards can create, Admins/Titulars can read
+    match /vehicle_registrations/{docId} {
+      allow create: if isGuard();
+      allow read: if isAdmin() || isGuard() || isTitular();
+      allow update, delete: if isAdmin() || isTitular();
+    }
+
+    // PEDESTRIAN REGISTRATIONS: Guards can create, Admins/Titulars can read
+    match /pedestrian_registrations/{docId} {
+      allow create: if isGuard();
+      allow read: if isAdmin() || isGuard() || isTitular();
+      allow update, delete: if isAdmin() || isTitular();
+    }
+    
+    // LOGBOOK: Guards can create, Admins/Titulars can read
+    match /logbook/{docId} {
+        allow create: if isGuard();
+        allow read: if isAdmin() || isGuard() || isTitular();
+        allow update, delete: if isAdmin() || isTitular();
+    }
+
+    // PACKAGES: Guards can create, Admins/Titulars can read, Residents can read their own
+    match /packages/{docId} {
+        allow create: if isGuard();
+        // Allow read for Admins, Guards, Titulars, and Residents (will need client-side filtering for residents)
+        allow read: if isAnyAuthenticatedUser();
+        allow update, delete: if isAdmin() || isTitular() || isGuard(); // Guards might need to update status
+    }
+    
+    // RESIDENTS: Admins/Titulars can manage
+    match /residents/{docId} {
+        allow read, create, update, delete: if isAdmin() || isTitular();
+    }
+
+    // GUARDS: Admins/Titulars can manage
+    match /guards/{docId} {
+        allow read, create, update, delete: if isAdmin() || isTitular();
+    }
+
+    // COMMUNICATIONS: Admins/Titulars can manage, Residents can read
+    match /communications/{docId} {
+        allow create, update, delete: if isAdmin() || isTitular();
+        allow read: if isAdmin() || isTitular() || isResident();
+    }
+
+    // SHIFTS: Guards can create/update their own shift, Admins/Titulars can read all
+    match /shifts/{shiftId} {
+        allow create: if isGuard() && request.resource.data.guardId == request.auth.uid;
+        allow update: if isGuard() && get(/databases/$(database)/documents/shifts/$(shiftId)).data.guardId == request.auth.uid;
+        allow read: if isAdmin() || isTitular() || (isGuard() && get(/databases/$(database)/documents/shifts/$(shiftId)).data.guardId == request.auth.uid);
+    }
+    
+    // PROOF OF LIFE: Guards can create for their own shift, Admins/Titulars can read
+    match /proof_of_life/{docId} {
+      allow create: if isGuard() && request.resource.data.guardId == request.auth.uid;
+      allow read: if isAdmin() || isTitular() || isGuard();
+    }
+
+    // VISITOR PASSES: Residents can create, Admins/Guards/Titulars can read
+    match /visitor_passes/{passId} {
+      allow create: if isResident() && request.resource.data.residentId == request.auth.uid;
+      allow read: if isAnyAuthenticatedUser(); // QR code scanning might not be authenticated, but for now, any user can read.
+      allow update, delete: if isAdmin() || isTitular();
     }
   }
 }
