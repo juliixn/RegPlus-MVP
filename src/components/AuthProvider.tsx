@@ -4,6 +4,7 @@ import { useEffect, useState, createContext, useContext, ReactNode } from 'react
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 // Augment the User type to include our custom role claim
 interface UserWithRole extends User {
@@ -27,25 +28,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Only subscribe if auth is properly initialized
-    if (!auth?.onAuthStateChanged) {
+    if (auth && auth.onAuthStateChanged) {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const tokenResult = await user.getIdTokenResult();
+                    const userRole = (tokenResult.claims.roles as string[])?.[0] || null;
+                    setUser({ ...user, role: userRole as 'admin' | 'guard' | 'resident' | 'titular_condo' });
+                    setRole(userRole);
+                } catch (error) {
+                    console.error("Error getting user token:", error);
+                    setUser(null);
+                    setRole(null);
+                }
+            } else {
+                setUser(null);
+                setRole(null);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    } else {
+        // If auth is not initialized, stop loading and treat as logged out.
         setLoading(false);
-        return;
     }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const tokenResult = await user.getIdTokenResult();
-        const userRole = (tokenResult.claims.roles as string[])?.[0] || null;
-        setUser({ ...user, role: userRole as 'admin' | 'guard' | 'resident' | 'titular_condo' });
-        setRole(userRole);
-      } else {
-        setUser(null);
-        setRole(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -119,12 +125,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Helper component for loading UI
-import { Loader2 } from 'lucide-react';
-
-const FullPageLoader = () => (
-  <div className="flex h-screen w-full items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
