@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StartShiftForm from "@/components/guard/StartShiftForm";
 import GuardDashboard from "@/components/guard/GuardDashboard";
 import VehicleRegistrationForm from "@/components/guard/VehicleRegistrationForm";
@@ -16,25 +16,41 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function GuardPage() {
-  const [shiftStarted, setShiftStarted] = useState(false);
+  const [shiftId, setShiftId] = useState<string | null>(null);
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Check local storage for an active shift when component mounts
+    const activeShiftId = localStorage.getItem('activeShiftId');
+    if (activeShiftId) {
+      setShiftId(activeShiftId);
+    }
+  }, []);
 
-  const handleStartShift = () => {
-    setShiftStarted(true);
+  const handleStartShift = (newShiftId: string) => {
+    localStorage.setItem('activeShiftId', newShiftId);
+    setShiftId(newShiftId);
   };
+
+  const handleEndShift = () => {
+    localStorage.removeItem('activeShiftId');
+    setShiftId(null);
+  }
 
   const openDialog = (dialog: string) => setActiveDialog(dialog);
   const closeDialog = () => setActiveDialog(null);
 
-  if (!shiftStarted) {
+  if (!shiftId || !user) {
     return <StartShiftForm onStartShift={handleStartShift} />;
   }
 
   return (
     <>
-      <GuardDashboard onOpenDialog={openDialog} />
+      <GuardDashboard onOpenDialog={openDialog} onEndShift={handleEndShift} shiftId={shiftId} />
 
       <Dialog open={activeDialog === 'vehicle'} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
         <DialogContent className="sm:max-w-[600px] max-h-screen overflow-y-auto">
@@ -84,6 +100,8 @@ export default function GuardPage() {
       <ProofOfLifeAlert
         isOpen={activeDialog === 'proofOfLife'}
         onClose={closeDialog}
+        shiftId={shiftId}
+        guardId={user.uid}
       />
     </>
   );

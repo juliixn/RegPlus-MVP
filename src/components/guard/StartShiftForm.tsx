@@ -1,21 +1,79 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../AuthProvider";
+import { startShift } from "@/app/actions";
 
 interface StartShiftFormProps {
-  onStartShift: () => void;
+  onStartShift: (shiftId: string) => void;
 }
 
 export default function StartShiftForm({ onStartShift }: StartShiftFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onStartShift();
+    setIsLoading(true);
+
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to start a shift.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const condominium = formData.get('condominium') as string;
+    const shiftType = formData.get('shift-type') as string;
+    const equipment = Array.from(formData.keys()).filter(key => 
+        (key === 'radio' || key === 'keys' || key === 'phone') && formData.get(key) === 'on'
+    );
+    
+    if (!condominium || !shiftType) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please select a condominium and shift type.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    const result = await startShift({
+        guardId: user.uid,
+        guardName: user.displayName || user.email,
+        condominium,
+        shiftType,
+        equipment,
+    });
+
+    if (result.success && result.shiftId) {
+        toast({
+            title: "Shift Started",
+            description: "Your shift has been successfully started.",
+        });
+        onStartShift(result.shiftId);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: result.error || "An unexpected error occurred.",
+        });
+    }
+
+    setIsLoading(false);
   }
 
   return (
@@ -34,20 +92,20 @@ export default function StartShiftForm({ onStartShift }: StartShiftFormProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
                 <Label htmlFor="condo">Condominium</Label>
-                <Select required>
+                <Select name="condominium" required>
                     <SelectTrigger id="condo">
                         <SelectValue placeholder="Select a condominium" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="condo-a">Sunset Villas</SelectItem>
-                        <SelectItem value="condo-b">Oceanview Heights</SelectItem>
-                        <SelectItem value="condo-c">Greenwood Park</SelectItem>
+                        <SelectItem value="Sunset Villas">Sunset Villas</SelectItem>
+                        <SelectItem value="Oceanview Heights">Oceanview Heights</SelectItem>
+                        <SelectItem value="Greenwood Park">Greenwood Park</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
              <div className="space-y-2">
                 <Label htmlFor="shift-type">Shift</Label>
-                <Select required>
+                <Select name="shift-type" required>
                     <SelectTrigger id="shift-type">
                         <SelectValue placeholder="Select your shift" />
                     </SelectTrigger>
@@ -62,19 +120,19 @@ export default function StartShiftForm({ onStartShift }: StartShiftFormProps) {
                 <Label>Equipment Received</Label>
                 <div className="space-y-2 rounded-md border p-4">
                     <div className="flex items-center space-x-2">
-                        <Checkbox id="radio" />
+                        <Checkbox id="radio" name="radio" />
                         <label htmlFor="radio" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Radio
                         </label>
                     </div>
                      <div className="flex items-center space-x-2">
-                        <Checkbox id="keys" />
+                        <Checkbox id="keys" name="keys" />
                         <label htmlFor="keys" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Keys
                         </label>
                     </div>
                      <div className="flex items-center space-x-2">
-                        <Checkbox id="phone" />
+                        <Checkbox id="phone" name="phone" />
                         <label htmlFor="phone" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Mobile Phone
                         </label>
@@ -82,7 +140,8 @@ export default function StartShiftForm({ onStartShift }: StartShiftFormProps) {
                 </div>
             </div>
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Start Shift
             </Button>
           </form>

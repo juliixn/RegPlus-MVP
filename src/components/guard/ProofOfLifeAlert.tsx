@@ -6,18 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import CameraCapture from './CameraCapture';
 import { useToast } from '@/hooks/use-toast';
-import { User, Building } from 'lucide-react';
+import { User, Building, Loader2 } from 'lucide-react';
+import { submitProofOfLife } from '@/app/actions';
 
 interface ProofOfLifeAlertProps {
   isOpen: boolean;
   onClose: () => void;
+  shiftId: string;
+  guardId: string;
 }
 
-export default function ProofOfLifeAlert({ isOpen, onClose }: ProofOfLifeAlertProps) {
+export default function ProofOfLifeAlert({ isOpen, onClose, shiftId, guardId }: ProofOfLifeAlertProps) {
   const [selfie, setSelfie] = useState<string | null>(null);
   const [surroundings, setSurroundings] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<'selfie' | 'surroundings' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const handleCapture = (imageDataUri: string) => {
@@ -35,7 +39,7 @@ export default function ProofOfLifeAlert({ isOpen, onClose }: ProofOfLifeAlertPr
     setIsCameraOpen(true);
   };
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selfie || !surroundings) {
         toast({
             variant: "destructive",
@@ -44,14 +48,26 @@ export default function ProofOfLifeAlert({ isOpen, onClose }: ProofOfLifeAlertPr
         });
         return;
     }
-    console.log({ selfie, surroundings });
-    toast({
-        title: "Proof of Life Submitted",
-        description: "Your status has been confirmed.",
-    });
-    setSelfie(null);
-    setSurroundings(null);
-    onClose();
+    setIsSubmitting(true);
+    
+    const result = await submitProofOfLife({ shiftId, guardId, selfie, surroundings });
+
+    if (result.success) {
+        toast({
+            title: "Proof of Life Submitted",
+            description: "Your status has been confirmed.",
+        });
+        setSelfie(null);
+        setSurroundings(null);
+        onClose();
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Submission Failed",
+            description: result.error || "Could not submit proof of life.",
+        });
+    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -79,7 +95,8 @@ export default function ProofOfLifeAlert({ isOpen, onClose }: ProofOfLifeAlertPr
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="destructive" className="w-full" onClick={handleSubmit}>
+            <Button type="button" variant="destructive" className="w-full" onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Proof
             </Button>
           </DialogFooter>

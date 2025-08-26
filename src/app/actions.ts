@@ -5,7 +5,7 @@ import type { OCRVisitorInformationOutput } from "@/ai/flows/ocr-visitor-informa
 import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc } from "firebase/firestore";
 import * as z from "zod";
 
 export async function extractInfoFromId(photoDataUri: string): Promise<OCRVisitorInformationOutput | { error: string }> {
@@ -169,6 +169,63 @@ export async function addCommunication(entry: z.infer<typeof communicationSchema
     } catch (e) {
         console.error("Error adding document: ", e);
         return { success: false, error: "Failed to save communication." };
+    }
+}
+
+const shiftSchema = z.object({
+  guardId: z.string(),
+  guardName: z.string().nullable(),
+  condominium: z.string(),
+  shiftType: z.string(),
+  equipment: z.array(z.string()),
+});
+
+export async function startShift(data: z.infer<typeof shiftSchema>): Promise<{ success: boolean; shiftId?: string; error?: string }> {
+    try {
+        const docRef = await addDoc(collection(db, "shifts"), {
+            ...data,
+            startTime: serverTimestamp(),
+            endTime: null,
+            status: 'active',
+        });
+        return { success: true, shiftId: docRef.id };
+    } catch (e) {
+        console.error("Error starting shift: ", e);
+        return { success: false, error: "Failed to start shift." };
+    }
+}
+
+export async function endShift(shiftId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const shiftDocRef = doc(db, "shifts", shiftId);
+        await updateDoc(shiftDocRef, {
+            endTime: serverTimestamp(),
+            status: 'completed',
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error ending shift: ", e);
+        return { success: false, error: "Failed to end shift." };
+    }
+}
+
+const proofOfLifeSchema = z.object({
+    shiftId: z.string(),
+    guardId: z.string(),
+    selfie: z.string(),
+    surroundings: z.string(),
+});
+
+export async function submitProofOfLife(data: z.infer<typeof proofOfLifeSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "proof_of_life"), {
+            ...data,
+            timestamp: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error submitting proof of life: ", e);
+        return { success: false, error: "Failed to submit proof of life." };
     }
 }
 

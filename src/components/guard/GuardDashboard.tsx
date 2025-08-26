@@ -7,13 +7,17 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { endShift } from "@/app/actions";
 
 interface GuardDashboardProps {
+  shiftId: string;
   onOpenDialog: (dialog: string) => void;
+  onEndShift: () => void;
 }
 
-export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
+export default function GuardDashboard({ shiftId, onOpenDialog, onEndShift }: GuardDashboardProps) {
   const [time, setTime] = useState(new Date());
+  const [isEndingShift, setIsEndingShift] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -23,21 +27,34 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      router.push('/');
-      toast({
-        title: "Logged Out",
-        description: "You have successfully logged out.",
-      });
-    } catch (error) {
-      console.error("Logout error", error);
-      toast({
+    setIsEndingShift(true);
+    const result = await endShift(shiftId);
+
+    if (result.success) {
+      try {
+        await auth.signOut();
+        onEndShift(); // Clear shift state in parent
+        router.push('/');
+        toast({
+          title: "Shift Ended",
+          description: "You have successfully ended your shift and logged out.",
+        });
+      } catch (error) {
+        console.error("Logout error", error);
+        toast({
+          variant: "destructive",
+          title: "Logout Failed",
+          description: "Shift ended, but an error occurred while logging out.",
+        });
+      }
+    } else {
+       toast({
         variant: "destructive",
-        title: "Logout Failed",
-        description: "An error occurred while logging out.",
+        title: "Shift End Failed",
+        description: result.error || "Could not record shift end time.",
       });
     }
+    setIsEndingShift(false);
   };
 
   const formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -109,7 +126,7 @@ export default function GuardDashboard({ onOpenDialog }: GuardDashboardProps) {
         </div>
       </main>
       <footer className="shrink-0 border-t bg-card p-4">
-        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-muted-foreground">
+        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-muted-foreground" disabled={isEndingShift}>
           <LogOut className="mr-2 h-4 w-4" />
           End Shift
         </Button>
