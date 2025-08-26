@@ -11,15 +11,31 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
-import { handlePasswordReset } from "./actions";
+import { handlePasswordReset, createUserAccount } from "./actions";
+import { z } from "zod";
+
+const signupSchema = z.object({
+  name: z.string().min(2, "Name is too short"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
+  
+  const [signupName, setSignupName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isSignupDialogOpen, setIsSignupDialogOpen] = useState(false);
+
   const router = useRouter();
   const { toast } = useToast();
 
@@ -36,6 +52,8 @@ export default function LoginPage() {
         errorMessage = 'Invalid email or password. Please try again.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/disabled') {
+        errorMessage = 'Your account is pending approval by an administrator.';
       }
       toast({
         variant: "destructive",
@@ -47,11 +65,44 @@ export default function LoginPage() {
     }
   };
 
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const validation = signupSchema.safeParse({ name: signupName, email: signupEmail, password: signupPassword });
+    if (!validation.success) {
+      toast({
+        variant: "destructive",
+        title: "Invalid data",
+        description: validation.error.errors[0].message,
+      });
+      return;
+    }
+
+    setIsSigningUp(true);
+    const result = await createUserAccount({ name: signupName, email: signupEmail, password: signupPassword });
+
+    if (result.success) {
+      toast({
+        title: "Account Created!",
+        description: "Your account has been created and is awaiting admin approval.",
+      });
+      setIsSignupDialogOpen(false);
+      setSignupName('');
+      setSignupEmail('');
+      setSignupPassword('');
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description: result.error,
+      });
+    }
+    setIsSigningUp(false);
+  };
+
   const handleDemoLogin = async (email: string) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, 'password');
-      // AuthProvider will handle redirection.
     } catch (error) {
       console.error("Demo login failed:", error);
       toast({
@@ -158,6 +209,35 @@ export default function LoginPage() {
                 Login
               </Button>
             </form>
+
+            <div className="mt-4 text-center text-sm">
+                <p>
+                    Don't have an account?{' '}
+                    <Dialog open={isSignupDialogOpen} onOpenChange={setIsSignupDialogOpen}>
+                        <DialogTrigger asChild>
+                            <button className="font-medium text-primary hover:underline">Sign up</button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Create an Account</DialogTitle>
+                                <DialogDescription>
+                                    After registration, your account must be approved by an administrator before you can log in.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleSignup} className="space-y-4">
+                                <Input placeholder="Full Name" value={signupName} onChange={e => setSignupName(e.target.value)} required disabled={isSigningUp} />
+                                <Input type="email" placeholder="Email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} required disabled={isSigningUp} />
+                                <Input type="password" placeholder="Password" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required disabled={isSigningUp} />
+                                <Button type="submit" className="w-full" disabled={isSigningUp}>
+                                    {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Create Account
+                                </Button>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </p>
+            </div>
+            
             <div className="mt-4 text-center text-sm">
               <p className="text-muted-foreground">Or continue for demo:</p>
                <Button onClick={() => handleDemoLogin('guard@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { LayoutDashboard, Users, ShieldCheck, Mail, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Mail, LogOut, UserCheck } from 'lucide-react';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '../AuthProvider';
@@ -38,6 +38,12 @@ export default function AdminLayout({
                                 <SidebarMenuButton href="/admin/dashboard" isActive={pathname.includes('/dashboard')} tooltip="Dashboard">
                                     <LayoutDashboard />
                                     <span>Dashboard</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton href="/admin/approvals" isActive={pathname.includes('/approvals')} tooltip="User Approvals">
+                                    <UserCheck />
+                                    <span>Approvals</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>

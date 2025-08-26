@@ -5,9 +5,131 @@ import type { OCRVisitorInformationOutput } from "@/ai/flows/ocr-visitor-informa
 import { ocrLicensePlate } from "@/ai/flows/ocr-license-plate";
 import type { OCRLicensePlateOutput } from "@/ai/flows/ocr-license-plate";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc, where, Timestamp,getCountFromServer } from "firebase/firestore";
+import { adminAuth, adminDb, admin } from "@/lib/firebase-admin";
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc, where, Timestamp, getCountFromServer, deleteDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
 import * as z from "zod";
+
+const signupSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+export async function createUserAccount(data: z.infer<typeof signupSchema>): Promise<{ success: boolean; error?: string }> {
+  if (!adminAuth || !adminDb) {
+    return { success: false, error: "The Admin SDK is not initialized. Please configure FIREBASE_SERVICE_ACCOUNT_KEY." };
+  }
+  try {
+    const { name, email, password } = data;
+
+    // Check if user already exists in Auth
+    try {
+        await adminAuth.getUserByEmail(email);
+        return { success: false, error: "An account with this email already exists." };
+    } catch (error: any) {
+        if (error.code !== 'auth/user-not-found') {
+            throw error; // Re-throw other errors
+        }
+    }
+
+    // Create user in Firebase Auth (disabled by default)
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+      disabled: true,
+    });
+
+    // Add user to 'pending_users' collection in Firestore
+    await adminDb.collection("pending_users").doc(userRecord.uid).set({
+      uid: userRecord.uid,
+      name,
+      email,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error creating user:", error);
+    let errorMessage = "Failed to create account.";
+    if (error.code === 'auth/email-already-exists') {
+        errorMessage = "An account with this email already exists.";
+    }
+    return { success: false, error: errorMessage };
+  }
+}
+
+export async function getPendingUsers(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    if (!adminDb) {
+      return { success: false, error: "The Admin SDK is not initialized." };
+    }
+    try {
+        const snapshot = await adminDb.collection("pending_users").orderBy("createdAt", "asc").get();
+        const users = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt.toDate().toLocaleString(),
+            };
+        });
+        return { success: true, data: users };
+    } catch (error) {
+        console.error("Error fetching pending users:", error);
+        return { success: false, error: "Failed to fetch pending users." };
+    }
+}
+
+const approvalSchema = z.object({
+    uid: z.string(),
+    role: z.enum(["admin", "guard", "resident", "titular_condo"]),
+});
+
+export async function approveUser(data: z.infer<typeof approvalSchema>): Promise<{ success: boolean; error?: string }> {
+    if (!adminAuth || !adminDb) {
+      return { success: false, error: "The Admin SDK is not initialized." };
+    }
+    try {
+        const { uid, role } = data;
+        
+        // 1. Set custom claim for the user
+        await adminAuth.setCustomUserClaims(uid, { roles: [role] });
+
+        // 2. Enable the user
+        await adminAuth.updateUser(uid, { disabled: false });
+
+        // 3. Delete the user from the pending_users collection
+        await adminDb.collection("pending_users").doc(uid).delete();
+
+        // Optional: Trigger a confirmation email here in the future
+        // For now, the user can just log in.
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error approving user:", error);
+        return { success: false, error: "Failed to approve user." };
+    }
+}
+
+export async function denyUser(uid: string): Promise<{ success: boolean; error?: string }> {
+    if (!adminAuth || !adminDb) {
+      return { success: false, error: "The Admin SDK is not initialized." };
+    }
+    try {
+        // 1. Delete user from Auth
+        await adminAuth.deleteUser(uid);
+        
+        // 2. Delete from pending_users
+        await adminDb.collection("pending_users").doc(uid).delete();
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error denying user:", error);
+        return { success: false, error: "Failed to deny user." };
+    }
+}
+
 
 export async function extractInfoFromId(photoDataUri: string): Promise<OCRVisitorInformationOutput | { error: string }> {
   try {
