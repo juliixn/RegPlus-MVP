@@ -153,6 +153,25 @@ export async function addGuard(entry: z.infer<typeof guardSchema>): Promise<{ su
     }
 }
 
+const communicationSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  audience: z.string(),
+});
+
+export async function addCommunication(entry: z.infer<typeof communicationSchema>): Promise<{ success: boolean; error?: string }> {
+    try {
+        await addDoc(collection(db, "communications"), {
+            ...entry,
+            sentAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        return { success: false, error: "Failed to save communication." };
+    }
+}
+
 
 // Functions to fetch history
 async function getCollectionData(collectionName: string, orderByField: string = 'timestamp') {
@@ -168,6 +187,7 @@ async function getCollectionData(collectionName: string, orderByField: string = 
                 timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate().toLocaleString() : null,
                 receivedAt: docData.receivedAt?.toDate ? docData.receivedAt.toDate().toLocaleString() : null,
                 createdAt: docData.createdAt?.toDate ? docData.createdAt.toDate().toLocaleString() : null,
+                sentAt: docData.sentAt?.toDate ? docData.sentAt.toDate().toLocaleString() : null,
             };
         });
         return { success: true, data };
@@ -199,4 +219,8 @@ export async function getResidents() {
 
 export async function getGuards() {
     return getCollectionData("guards", "createdAt");
+}
+
+export async function getCommunications() {
+    return getCollectionData("communications", "sentAt");
 }

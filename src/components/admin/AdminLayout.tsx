@@ -53,7 +53,7 @@ export default function AdminLayout({
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                              <SidebarMenuItem>
-                                <SidebarMenuButton href="#" tooltip="Communications">
+                                <SidebarMenuButton href="/admin/communications" isActive={pathname.includes('/communications')} tooltip="Communications">
                                     <Mail />
                                     <span>Communications</span>
                                 </SidebarMenuButton>
