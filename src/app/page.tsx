@@ -116,6 +116,9 @@ export default function LoginPage() {
                <Button onClick={() => handleDemoLogin('admin@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
                 Login as Admin
               </Button>
+               <Button onClick={() => handleDemoLogin('resident@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+                Login as Resident
+              </Button>
             </div>
           </CardContent>
         </Card>
