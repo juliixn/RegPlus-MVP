@@ -229,6 +229,33 @@ export async function submitProofOfLife(data: z.infer<typeof proofOfLifeSchema>)
     }
 }
 
+const visitorPassSchema = z.object({
+    visitorName: z.string(),
+    visitDate: z.date(),
+    residentId: z.string(),
+});
+
+export async function generateVisitorPass(data: z.infer<typeof visitorPassSchema>): Promise<{ success: boolean; passData?: any; error?: string }> {
+    try {
+        const docRef = await addDoc(collection(db, "visitor_passes"), {
+            ...data,
+            status: 'active',
+            createdAt: serverTimestamp(),
+        });
+        
+        const passData = {
+            passId: docRef.id,
+            visitorName: data.visitorName,
+            visitDate: data.visitDate.toISOString().split('T')[0], // aaaa-mm-dd
+        };
+
+        return { success: true, passData };
+    } catch (e) {
+        console.error("Error generating visitor pass: ", e);
+        return { success: false, error: "Failed to generate visitor pass." };
+    }
+}
+
 
 // Functions to fetch history
 async function getCollectionData(collectionName: string, orderByField: string = 'timestamp') {
