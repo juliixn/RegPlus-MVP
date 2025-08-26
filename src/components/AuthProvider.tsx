@@ -31,13 +31,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (loading) return;
 
     const isAuthPage = pathname === '/';
-    const isProtectedPage = pathname.startsWith('/guard');
+    const isProtectedPage = pathname.startsWith('/guard') || pathname.startsWith('/admin');
 
     if (!user && isProtectedPage) {
       router.push('/');
     }
+    // Simple redirect from auth page if logged in.
+    // A more robust solution would check the user's role.
     if (user && isAuthPage) {
-      router.push('/guard/dashboard');
+        router.push('/guard/dashboard');
     }
   }, [user, loading, pathname, router]);
 
@@ -51,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const isAuthPage = pathname === '/';
-  const isProtectedPage = pathname.startsWith('/guard');
+  const isProtectedPage = pathname.startsWith('/guard') || pathname.startsWith('/admin');
 
   if (isAuthPage && user) {
       return null;

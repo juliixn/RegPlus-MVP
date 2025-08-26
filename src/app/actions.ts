@@ -117,8 +117,9 @@ export async function addPackageEntry(entry: z.infer<typeof packageSchema>): Pro
 
 // Functions to fetch history
 async function getCollectionData(collectionName: string) {
+    const orderByField = collectionName === 'packages' ? 'receivedAt' : 'timestamp';
     try {
-        const q = query(collection(db, collectionName), orderBy("timestamp", "desc"), limit(50));
+        const q = query(collection(db, collectionName), orderBy(orderByField, "desc"), limit(50));
         const querySnapshot = await getDocs(q);
         const data = querySnapshot.docs.map(doc => {
             const docData = doc.data();
@@ -148,4 +149,8 @@ export async function getPedestrianEntries() {
 
 export async function getLogbookEntries() {
     return getCollectionData("logbook");
+}
+
+export async function getPackageEntries() {
+    return getCollectionData("packages");
 }

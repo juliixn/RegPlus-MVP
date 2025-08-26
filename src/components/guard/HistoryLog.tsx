@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getVehicleEntries, getPedestrianEntries, getLogbookEntries } from '@/app/actions';
+import { getVehicleEntries, getPedestrianEntries, getLogbookEntries, getPackageEntries } from '@/app/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,7 @@ export default function HistoryLog() {
   const [vehicleData, setVehicleData] = useState<Entry[]>([]);
   const [pedestrianData, setPedestrianData] = useState<Entry[]>([]);
   const [logbookData, setLogbookData] = useState<Entry[]>([]);
+  const [packageData, setPackageData] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -24,15 +25,17 @@ export default function HistoryLog() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [vehicles, pedestrians, logbook] = await Promise.all([
+        const [vehicles, pedestrians, logbook, packages] = await Promise.all([
           getVehicleEntries(),
           getPedestrianEntries(),
           getLogbookEntries(),
+          getPackageEntries(),
         ]);
 
         if (vehicles.success && vehicles.data) setVehicleData(vehicles.data);
         if (pedestrians.success && pedestrians.data) setPedestrianData(pedestrians.data);
         if (logbook.success && logbook.data) setLogbookData(logbook.data);
+        if (packages.success && packages.data) setPackageData(packages.data);
 
       } catch (error) {
         console.error("Failed to fetch history logs", error);
@@ -59,9 +62,10 @@ export default function HistoryLog() {
   return (
     <div className="pt-4">
         <Tabs defaultValue="vehicles">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
             <TabsTrigger value="pedestrians">Pedestrians</TabsTrigger>
+            <TabsTrigger value="packages">Packages</TabsTrigger>
             <TabsTrigger value="logbook">Logbook</TabsTrigger>
         </TabsList>
         <ScrollArea className="h-96 w-full">
@@ -104,6 +108,28 @@ export default function HistoryLog() {
                             <TableCell>{p.visitorName}</TableCell>
                             <TableCell>{p.visitorType}</TableCell>
                             <TableCell>{p.destination}</TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TabsContent>
+             <TabsContent value="packages">
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Received At</TableHead>
+                        <TableHead>Recipient</TableHead>
+                        <TableHead>Courier</TableHead>
+                        <TableHead>Tracking #</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {packageData.map((p) => (
+                        <TableRow key={p.id}>
+                            <TableCell>{p.receivedAt}</TableCell>
+                            <TableCell>{p.recipient}</TableCell>
+                            <TableCell>{p.courier}</TableCell>
+                            <TableCell>{p.trackingNumber}</TableCell>
                         </TableRow>
                         ))}
                     </TableBody>
