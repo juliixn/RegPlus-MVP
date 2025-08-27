@@ -162,3 +162,5 @@ export default function VisitorPassDialog({ isOpen, onClose, residentId }: Visit
     </Dialog>
   );
 }
+
+    

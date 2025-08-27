@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import CameraCapture from './CameraCapture';
 import { useToast } from '@/hooks/use-toast';
 import { User, Building, Loader2 } from 'lucide-react';
-import { submitProofOfLife } from '@/app/actions';
+import { submitProofOfLife, addFileAndGetURL } from '@/app/actions';
 
 interface ProofOfLifeAlertProps {
   isOpen: boolean;
@@ -50,7 +50,27 @@ export default function ProofOfLifeAlert({ isOpen, onClose, shiftId, guardId }: 
     }
     setIsSubmitting(true);
     
-    const result = await submitProofOfLife({ shiftId, guardId, selfie, surroundings });
+    // Upload images to storage
+    const selfiePath = `proof_of_life/${guardId}_${Date.now()}_selfie.jpg`;
+    const surroundingsPath = `proof_of_life/${guardId}_${Date.now()}_surroundings.jpg`;
+
+    const [selfieResult, surroundingsResult] = await Promise.all([
+        addFileAndGetURL(selfie, selfiePath),
+        addFileAndGetURL(surroundings, surroundingsPath)
+    ]);
+
+    if (!selfieResult.success || !surroundingsResult.success || !selfieResult.url || !surroundingsResult.url) {
+        toast({ variant: "destructive", title: "Image Upload Failed", description: "Could not upload proof of life images."});
+        setIsSubmitting(false);
+        return;
+    }
+
+    const result = await submitProofOfLife({ 
+        shiftId, 
+        guardId, 
+        selfie: selfieResult.url, 
+        surroundings: surroundingsResult.url 
+    });
 
     if (result.success) {
         toast({
@@ -114,3 +134,5 @@ export default function ProofOfLifeAlert({ isOpen, onClose, shiftId, guardId }: 
     </>
   );
 }
+
+    
