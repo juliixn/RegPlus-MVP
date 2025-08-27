@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '../AuthProvider';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
+import LocaleSwitcher from '../LocaleSwitcher';
 
 export default function AdminLayout({
     children,
@@ -27,9 +28,12 @@ export default function AdminLayout({
             <div className="flex min-h-screen">
                 <Sidebar>
                     <SidebarHeader>
-                        <div className="flex items-center gap-2 p-2">
-                            <ShieldCheck className="w-8 h-8 text-primary" />
-                            <h1 className="text-xl font-semibold">Admin Panel</h1>
+                        <div className="flex items-center justify-between p-2">
+                           <div className="flex items-center gap-2">
+                             <ShieldCheck className="w-8 h-8 text-primary" />
+                             <h1 className="text-xl font-semibold">Admin Panel</h1>
+                           </div>
+                           <LocaleSwitcher />
                         </div>
                     </SidebarHeader>
                     <SidebarContent>

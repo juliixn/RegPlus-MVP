@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { endShift } from "@/app/actions";
+import LocaleSwitcher from "../LocaleSwitcher";
 
 interface GuardDashboardProps {
   shiftId: string;
@@ -74,9 +76,12 @@ export default function GuardDashboard({ shiftId, onOpenDialog, onEndShift }: Gu
             <ShieldAlert className="h-6 w-6 text-primary" />
             <h1 className="text-lg font-semibold">Guard Dashboard</h1>
         </div>
-        <div className="text-right">
-            <div className="font-mono text-lg font-semibold">{formattedTime}</div>
-            <div className="text-xs text-muted-foreground">{formattedDate}</div>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+              <div className="font-mono text-lg font-semibold">{formattedTime}</div>
+              <div className="text-xs text-muted-foreground">{formattedDate}</div>
+          </div>
+          <LocaleSwitcher />
         </div>
       </header>
       <main className="flex-1 p-4 md:p-6">

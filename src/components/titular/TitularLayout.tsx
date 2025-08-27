@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Building, LogOut, FileText } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '../AuthProvider';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
+import LocaleSwitcher from '../LocaleSwitcher';
 
 export default function TitularLayout({
     children,
@@ -17,6 +19,7 @@ export default function TitularLayout({
     const pathname = usePathname();
 
     const handleLogout = async () => {
+        if (!auth) return;
         await auth.signOut();
         router.push('/');
     };
@@ -26,9 +29,12 @@ export default function TitularLayout({
             <div className="flex min-h-screen">
                 <Sidebar>
                     <SidebarHeader>
-                        <div className="flex items-center gap-2 p-2">
-                            <Building className="w-8 h-8 text-primary" />
-                            <h1 className="text-xl font-semibold">Titular Portal</h1>
+                        <div className="flex items-center justify-between p-2">
+                           <div className="flex items-center gap-2">
+                             <Building className="w-8 h-8 text-primary" />
+                             <h1 className="text-xl font-semibold">Titular Portal</h1>
+                           </div>
+                           <LocaleSwitcher />
                         </div>
                     </SidebarHeader>
                     <SidebarContent>

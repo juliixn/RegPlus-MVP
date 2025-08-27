@@ -14,6 +14,8 @@ import { ShieldCheck, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { handlePasswordReset, createUserAccount } from "./actions";
 import { z } from "zod";
+import { useLocale } from "@/components/LocaleProvider";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name is too short"),
@@ -39,14 +41,15 @@ export default function LoginPage() {
 
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLocale();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!auth) {
       toast({
         variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Firebase is not properly configured. Please check your environment variables.",
+        title: t('firebaseNotConfiguredTitle'),
+        description: t('firebaseNotConfiguredDescription'),
       });
       return;
     }
@@ -56,17 +59,17 @@ export default function LoginPage() {
       // AuthProvider will handle redirection based on role.
     } catch (error: any) {
       console.error("Authentication error:", error);
-      let errorMessage = "An unexpected error occurred.";
+      let errorMessage = t('loginErrorUnexpected');
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = 'Invalid email or password. Please try again.';
+        errorMessage = t('loginErrorInvalidCredentials');
       } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Please enter a valid email address.';
+        errorMessage = t('loginErrorInvalidEmail');
       } else if (error.code === 'auth/disabled') {
-        errorMessage = 'Your account is pending approval by an administrator.';
+        errorMessage = t('loginErrorDisabled');
       }
       toast({
         variant: "destructive",
-        title: "Login Failed",
+        title: t('loginFailedTitle'),
         description: errorMessage,
       });
     } finally {
@@ -79,8 +82,8 @@ export default function LoginPage() {
     if (!auth) {
       toast({
         variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Firebase is not properly configured. Please check your environment variables.",
+        title: t('firebaseNotConfiguredTitle'),
+        description: t('firebaseNotConfiguredDescription'),
       });
       return;
     }
@@ -99,8 +102,8 @@ export default function LoginPage() {
 
     if (result.success) {
       toast({
-        title: "Account Created!",
-        description: "Your account has been created and is awaiting admin approval.",
+        title: t('signupSuccessTitle'),
+        description: t('signupSuccessDescription'),
       });
       setIsSignupDialogOpen(false);
       setSignupName('');
@@ -109,7 +112,7 @@ export default function LoginPage() {
     } else {
       toast({
         variant: "destructive",
-        title: "Signup Failed",
+        title: t('signupFailedTitle'),
         description: result.error,
       });
     }
@@ -120,8 +123,8 @@ export default function LoginPage() {
     if (!auth) {
       toast({
         variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Firebase is not properly configured. Please check your environment variables.",
+        title: t('firebaseNotConfiguredTitle'),
+        description: t('firebaseNotConfiguredDescription'),
       });
       return;
     }
@@ -145,8 +148,8 @@ export default function LoginPage() {
     if (!auth) {
       toast({
         variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Firebase is not properly configured. Please check your environment variables.",
+        title: t('firebaseNotConfiguredTitle'),
+        description: t('firebaseNotConfiguredDescription'),
       });
       return;
     }
@@ -154,8 +157,8 @@ export default function LoginPage() {
     const result = await handlePasswordReset(resetEmail);
     if (result.success) {
       toast({
-        title: "Password Reset Email Sent",
-        description: "Please check your inbox to reset your password.",
+        title: t('passwordResetSuccessTitle'),
+        description: t('passwordResetSuccessDescription'),
       });
       setIsResetDialogOpen(false);
     } else {
@@ -170,6 +173,9 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+       <div className="absolute top-4 right-4">
+        <LocaleSwitcher />
+      </div>
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
@@ -178,7 +184,7 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-3xl font-bold">RegPlus</CardTitle>
             <CardDescription>
-              Condominium Security & Management
+              {t('appSubtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -197,18 +203,18 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t('password')}</Label>
                   <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
                     <DialogTrigger asChild>
                        <button type="button" className="text-sm font-medium text-primary hover:underline">
-                        Forgot password?
+                        {t('forgotPassword')}
                       </button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogTitle>{t('resetPasswordTitle')}</DialogTitle>
                         <DialogDescription>
-                          Enter your email address and we will send you a link to reset your password.
+                          {t('resetPasswordDescription')}
                         </DialogDescription>
                       </DialogHeader>
                       <form onSubmit={onPasswordReset} className="space-y-4">
@@ -222,7 +228,7 @@ export default function LoginPage() {
                         />
                         <Button type="submit" className="w-full" disabled={isResetting}>
                           {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Send Reset Link
+                          {t('sendResetLink')}
                         </Button>
                       </form>
                     </DialogContent>
@@ -239,31 +245,31 @@ export default function LoginPage() {
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Login
+                {t('login')}
               </Button>
             </form>
 
             <div className="mt-4 text-center text-sm">
                 <p>
-                    Don't have an account?{' '}
+                    {t('noAccount')}{' '}
                     <Dialog open={isSignupDialogOpen} onOpenChange={setIsSignupDialogOpen}>
                         <DialogTrigger asChild>
-                            <button className="font-medium text-primary hover:underline">Sign up</button>
+                            <button className="font-medium text-primary hover:underline">{t('signup')}</button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Create an Account</DialogTitle>
+                                <DialogTitle>{t('createAccountTitle')}</DialogTitle>
                                 <DialogDescription>
-                                    After registration, your account must be approved by an administrator before you can log in.
+                                    {t('createAccountDescription')}
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSignup} className="space-y-4">
-                                <Input placeholder="Full Name" value={signupName} onChange={e => setSignupName(e.target.value)} required disabled={isSigningUp} />
+                                <Input placeholder={t('fullName')} value={signupName} onChange={e => setSignupName(e.target.value)} required disabled={isSigningUp} />
                                 <Input type="email" placeholder="Email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} required disabled={isSigningUp} />
-                                <Input type="password" placeholder="Password" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required disabled={isSigningUp} />
+                                <Input type="password" placeholder={t('password')} value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required disabled={isSigningUp} />
                                 <Button type="submit" className="w-full" disabled={isSigningUp}>
                                     {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Create Account
+                                    {t('createAccount')}
                                 </Button>
                             </form>
                         </DialogContent>
@@ -272,18 +278,18 @@ export default function LoginPage() {
             </div>
             
             <div className="mt-4 text-center text-sm">
-              <p className="text-muted-foreground">Or continue for demo:</p>
+              <p className="text-muted-foreground">{t('demo')}</p>
                <Button onClick={() => handleDemoLogin('guard@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
-                Login as Guard
+                {t('loginAsGuard')}
               </Button>
                <Button onClick={() => handleDemoLogin('admin@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
-                Login as Admin
+                {t('loginAsAdmin')}
               </Button>
                <Button onClick={() => handleDemoLogin('resident@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
-                Login as Resident
+                {t('loginAsResident')}
               </Button>
               <Button onClick={() => handleDemoLogin('titular@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
-                Login as Titular Condo
+                {t('loginAsTitular')}
               </Button>
             </div>
           </CardContent>
@@ -292,5 +298,3 @@ export default function LoginPage() {
     </main>
   )
 }
-
-    
