@@ -136,7 +136,8 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Demo Login Failed",
-        description: `Could not log in. Please create a user for '${email}' in your Firebase project with the password 'password' and assign them a role.`,
+        description: `To use this demo, please create a user for '${email}' in your Firebase project with the password 'password' and assign them the correct role.`,
+        duration: 9000,
       });
     } finally {
       setIsLoading(false);
