@@ -1,3 +1,5 @@
+
+import 'dotenv/config';
 import * as admin from 'firebase-admin';
 
 // Check if the service account key is available
