@@ -282,50 +282,6 @@ export async function addFileAndGetURL(fileDataUrl: string, path: string): Promi
     }
 }
 
-const residentSchema = z.object({
-  name: z.string(),
-  apartment: z.string(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-});
-
-export async function addResident(entry: z.infer<typeof residentSchema>): Promise<{ success: boolean; error?: string }> {
-    if (!db) {
-        return { success: false, error: "Firebase is not configured." };
-    }
-    try {
-        await addDoc(collection(db, "residents"), {
-            ...entry,
-            createdAt: serverTimestamp(),
-        });
-        return { success: true };
-    } catch (e) {
-        console.error("Error adding document: ", e);
-        return { success: false, error: "Failed to save resident to the database." };
-    }
-}
-
-const guardSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-});
-
-export async function addGuard(entry: z.infer<typeof guardSchema>): Promise<{ success: boolean; error?: string }> {
-    if (!db) {
-        return { success: false, error: "Firebase is not configured." };
-    }
-    try {
-        await addDoc(collection(db, "guards"), {
-            ...entry,
-            createdAt: serverTimestamp(),
-        });
-        return { success: true };
-    } catch (e) {
-        console.error("Error adding document: ", e);
-        return { success: false, error: "Failed to save guard to the database." };
-    }
-}
-
 const communicationSchema = z.object({
   title: z.string(),
   content: z.string(),
