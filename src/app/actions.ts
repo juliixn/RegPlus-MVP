@@ -1,3 +1,4 @@
+
 "use server";
 
 import { ocrVisitorInformation } from "@/ai/flows/ocr-visitor-information";
@@ -84,6 +85,8 @@ export async function getPendingUsers(): Promise<{ success: boolean; data?: any[
 
 const approvalSchema = z.object({
     uid: z.string(),
+    name: z.string(),
+    email: z.string().email(),
     role: z.enum(["admin", "guard", "resident", "titular_condo"]),
 });
 
@@ -92,19 +95,32 @@ export async function approveUser(data: z.infer<typeof approvalSchema>): Promise
       return { success: false, error: "The Admin SDK is not initialized." };
     }
     try {
-        const { uid, role } = data;
+        const { uid, role, name, email } = data;
         
         // 1. Set custom claim for the user
         await adminAuth.setCustomUserClaims(uid, { roles: [role] });
 
         // 2. Enable the user
         await adminAuth.updateUser(uid, { disabled: false });
+        
+        // 3. If user is a resident or guard, add them to the respective collection
+        if (role === 'resident') {
+            await adminDb.collection('residents').doc(uid).set({
+                name,
+                email,
+                apartment: 'Not Assigned', // Default value, can be updated later
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        } else if (role === 'guard') {
+            await adminDb.collection('guards').doc(uid).set({
+                name,
+                email,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
 
-        // 3. Delete the user from the pending_users collection
+        // 4. Delete the user from the pending_users collection
         await adminDb.collection("pending_users").doc(uid).delete();
-
-        // Optional: Trigger a confirmation email here in the future
-        // For now, the user can just log in.
 
         return { success: true };
     } catch (error) {

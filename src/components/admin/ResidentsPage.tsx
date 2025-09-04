@@ -1,12 +1,12 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
 import { getResidents } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ResidentForm from './ResidentForm';
 
 interface Resident {
   id: string;
@@ -56,11 +56,8 @@ export default function ResidentsPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Residents</h2>
           <p className="text-muted-foreground">
-            Manage the residents of the condominium.
+            Manage the residents of the condominium. New residents are added via the User Approvals page.
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <ResidentForm onSuccess={fetchResidents} />
         </div>
       </div>
       <Card>

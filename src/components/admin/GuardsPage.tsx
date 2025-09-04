@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -6,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import GuardForm from './GuardForm';
 
 interface Guard {
   id: string;
@@ -54,11 +54,8 @@ export default function GuardsPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Guards</h2>
           <p className="text-muted-foreground">
-            Manage the security guards.
+            Manage the security guards. New guards are added via the User Approvals page.
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <GuardForm onSuccess={fetchGuards} />
         </div>
       </div>
       <Card>

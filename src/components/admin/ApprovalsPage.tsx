@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -66,7 +67,12 @@ export default function ApprovalsPage() {
       return;
     }
     setProcessingId(user.id);
-    const result = await approveUser({ uid: user.id, role: role as any });
+    const result = await approveUser({ 
+      uid: user.id, 
+      role: role as any,
+      name: user.name,
+      email: user.email,
+    });
     if (result.success) {
       toast({
         title: "User Approved",
