@@ -510,3 +510,64 @@ export async function handlePasswordReset(email: string): Promise<{ success: boo
         return { success: false, error: "Failed to send password reset email." };
     }
 }
+
+export async function createDemoUsers(): Promise<{ success: boolean; error?: string }> {
+  if (!adminAuth || !adminDb) {
+    return { success: false, error: "The Admin SDK is not initialized. Please configure FIREBASE_SERVICE_ACCOUNT_KEY." };
+  }
+
+  const demoUsers = [
+    { email: 'admin@regplus.com', name: 'Admin Demo', role: 'admin' },
+    { email: 'guard@regplus.com', name: 'Guard Demo', role: 'guard' },
+    { email: 'resident@regplus.com', name: 'Resident Demo', role: 'resident' },
+    { email: 'titular@regplus.com', name: 'Titular Demo', role: 'titular_condo' },
+  ];
+
+  try {
+    for (const demoUser of demoUsers) {
+      const { email, name, role } = demoUser;
+      
+      let userRecord;
+      try {
+        // Check if user exists
+        userRecord = await adminAuth.getUserByEmail(email);
+        // If user exists, update their claims and data
+        await adminAuth.setCustomUserClaims(userRecord.uid, { roles: [role] });
+        await adminAuth.updateUser(userRecord.uid, { disabled: false, displayName: name });
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+          // If user does not exist, create them
+          userRecord = await adminAuth.createUser({
+            email,
+            password: 'password',
+            displayName: name,
+            disabled: false,
+          });
+          await adminAuth.setCustomUserClaims(userRecord.uid, { roles: [role] });
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
+
+      // Add to corresponding collections if resident or guard
+      if (role === 'resident') {
+        await adminDb.collection('residents').doc(userRecord.uid).set({
+          name,
+          email,
+          apartment: 'Demo Apt',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } else if (role === 'guard') {
+        await adminDb.collection('guards').doc(userRecord.uid).set({
+          name,
+          email,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error creating demo users:", error);
+    return { success: false, error: `Failed to create demo users. ${error.message}` };
+  }
+}

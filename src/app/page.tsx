@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
-import { handlePasswordReset, createUserAccount } from "./actions";
+import { handlePasswordReset, createUserAccount, createDemoUsers } from "./actions";
 import { z } from "zod";
 import { useLocale } from "@/components/LocaleProvider";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
@@ -35,6 +35,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSettingUp, setIsSettingUp] = useState(false);
 
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isSignupDialogOpen, setIsSignupDialogOpen] = useState(false);
@@ -136,7 +137,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Demo Login Failed",
-        description: `To use this demo, please create a user for '${email}' in your Firebase project with the password 'password' and assign them the correct role.`,
+        description: `To use this demo, please create a user for '${email}' in your Firebase project with the password 'password' and assign them the correct role. Or click 'Setup Demo Users'.`,
         duration: 9000,
       });
     } finally {
@@ -170,6 +171,25 @@ export default function LoginPage() {
       });
     }
     setIsResetting(false);
+  };
+
+  const handleSetupDemo = async () => {
+    setIsSettingUp(true);
+    const result = await createDemoUsers();
+    if (result.success) {
+      toast({
+        title: "Demo Users Created",
+        description: "You can now log in with the demo accounts.",
+      });
+    } else {
+       toast({
+        variant: "destructive",
+        title: "Setup Failed",
+        description: result.error || "Could not create demo users. Make sure your Admin SDK key is configured in .env.",
+        duration: 9000,
+      });
+    }
+    setIsSettingUp(false);
   };
 
   return (
@@ -280,17 +300,21 @@ export default function LoginPage() {
             
             <div className="mt-4 text-center text-sm">
               <p className="text-muted-foreground">{t('demo')}</p>
-               <Button onClick={() => handleDemoLogin('guard@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+               <Button onClick={() => handleDemoLogin('guard@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading || isSettingUp}>
                 {t('loginAsGuard')}
               </Button>
-               <Button onClick={() => handleDemoLogin('admin@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+               <Button onClick={() => handleDemoLogin('admin@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading || isSettingUp}>
                 {t('loginAsAdmin')}
               </Button>
-               <Button onClick={() => handleDemoLogin('resident@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+               <Button onClick={() => handleDemoLogin('resident@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading || isSettingUp}>
                 {t('loginAsResident')}
               </Button>
-              <Button onClick={() => handleDemoLogin('titular@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading}>
+              <Button onClick={() => handleDemoLogin('titular@regplus.com')} variant="outline" className="mt-2 w-full" disabled={isLoading || isSettingUp}>
                 {t('loginAsTitular')}
+              </Button>
+               <Button onClick={handleSetupDemo} variant="secondary" className="mt-2 w-full" disabled={isSettingUp || isLoading}>
+                 {isSettingUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Setup Demo Users
               </Button>
             </div>
           </CardContent>
